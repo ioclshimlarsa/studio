@@ -18,7 +18,6 @@ const MOCK_USER_ID = 'user01';
 const user = { name: 'Alice' }; // Mock user
 
 const myBooks = books.filter((book) => book.issuedTo === MOCK_USER_ID);
-const availableBooks = books.filter((book) => book.status === 'Available');
 const myHistory = histories.find((h) => h.userId === MOCK_USER_ID)?.history || [];
 
 export default function UserDashboard() {
@@ -116,13 +115,17 @@ export default function UserDashboard() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {availableBooks.map((book) => (
-                                            <TableRow key={book.id}>
+                                        {books.map((book) => (
+                                            <TableRow key={book.id} className={book.status !== 'Available' ? 'text-muted-foreground' : ''}>
                                                 <TableCell className="font-medium">{book.title}</TableCell>
                                                 <TableCell>{book.author}</TableCell>
                                                 <TableCell>{book.language}</TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button size="sm">Request</Button>
+                                                    {book.status === 'Available' ? (
+                                                        <Button size="sm">Request</Button>
+                                                    ) : (
+                                                        <span className="text-sm italic">Someone is reading it</span>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))}

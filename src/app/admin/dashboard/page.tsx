@@ -9,29 +9,32 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban } from 'lucide-react';
+import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban, Trash2 } from 'lucide-react';
 import { ReminderDialog } from '@/components/admin/reminder-dialog';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { CreateUserForm } from '@/components/admin/create-user-form';
 import { useToast } from '@/hooks/use-toast';
-import { updateUserStatus, resetUserPassword } from '@/lib/actions';
+import { updateUserStatus, resetUserPassword, removeBook } from '@/lib/actions';
 
 const bookRequests = books.filter((book) => book.status === 'Requested');
 const overdueBooks = books.filter((book) => 
   book.status === 'Issued' && book.dueDate && differenceInDays(new Date(), parseISO(book.dueDate)) > 0
 );
-const allBooks = books;
+
 
 export default function AdminDashboard() {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [isReminderOpen, setReminderOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('requests');
   const { toast } = useToast();
-  // Force a re-render when user data changes
+  // Force a re-render when user/book data changes
   const [userVersion, setUserVersion] = useState(0); 
+  const [bookVersion, setBookVersion] = useState(0); 
+
   const allUsers = users;
+  const allBooks = books;
 
   const handleSendReminder = (book: Book) => {
     setSelectedBook(book);
@@ -64,6 +67,18 @@ export default function AdminDashboard() {
         } else {
             toast({ title: 'Error', description: result.message, variant: 'destructive' });
         }
+    }
+  };
+  
+  const handleRemoveBook = async (bookId: string, bookTitle: string) => {
+    if (confirm(`Are you sure you want to remove the book "${bookTitle}"? This action cannot be undone.`)) {
+      const result = await removeBook(bookId);
+      if (result.success) {
+        toast({ title: 'Book Removed', description: result.message });
+        setBookVersion(v => v + 1); // Trigger re-render
+      } else {
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+      }
     }
   };
 
@@ -236,6 +251,7 @@ export default function AdminDashboard() {
                       <TableHead>Author</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Issued To</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -249,6 +265,11 @@ export default function AdminDashboard() {
                           </Badge>
                         </TableCell>
                         <TableCell>{book.userName || 'N/A'}</TableCell>
+                        <TableCell className="text-right">
+                           <Button size="sm" variant="destructive" onClick={() => handleRemoveBook(book.id, book.title)}>
+                            <Trash2 className="mr-1 h-3 w-3" /> Remove
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

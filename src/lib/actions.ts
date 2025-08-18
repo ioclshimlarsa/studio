@@ -119,3 +119,17 @@ export async function resetUserPassword(userId: string) {
     }
     return { success: false, message: 'User not found.' };
 }
+
+export async function removeBook(bookId: string) {
+    const bookIndex = books.findIndex(b => b.id === bookId);
+    if (bookIndex > -1) {
+        const book = books[bookIndex];
+        // Optional: you might want to prevent deletion if a book is currently issued.
+        if (book.status === 'Issued') {
+            return { success: false, message: `Cannot remove "${book.title}" because it is currently issued to a user.`};
+        }
+        books.splice(bookIndex, 1);
+        return { success: true, message: `Book "${book.title}" has been removed.` };
+    }
+    return { success: false, message: 'Book not found.' };
+}

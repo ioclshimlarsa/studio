@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand } from 'lucide-react';
+import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut } from 'lucide-react';
 import { ReminderDialog } from '@/components/admin/reminder-dialog';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { Label } from '@/components/ui/label';
@@ -35,11 +35,21 @@ export default function AdminDashboard() {
     return histories.find(h => h.userId === userId);
   }
 
+  const handleLogout = () => {
+    window.location.href = '/';
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8">
-      <header className="mb-8">
-        <h1 className="text-4xl font-bold font-headline text-primary-foreground">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Manage your library with ease.</p>
+      <header className="mb-8 flex justify-between items-start">
+        <div>
+            <h1 className="text-4xl font-bold font-headline text-primary-foreground">Admin Dashboard</h1>
+            <p className="text-muted-foreground">Manage your library with ease.</p>
+        </div>
+        <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+        </Button>
       </header>
       
       <main>

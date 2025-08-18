@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Book, BookCheck, History, Library, User, Hand, PlusCircle } from 'lucide-react';
+import { Book, BookCheck, History, Library, User, Hand, PlusCircle, LogOut } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -24,11 +24,21 @@ const myHistory = histories.find((h) => h.userId === MOCK_USER_ID)?.history || [
 export default function UserDashboard() {
     const [activeTab, setActiveTab] = useState('my_books');
 
+    const handleLogout = () => {
+        window.location.href = '/';
+    };
+
     return (
         <div className="min-h-screen p-4 md:p-8">
-            <header className="mb-8">
-                <h1 className="text-4xl font-bold font-headline text-primary-foreground">Welcome, {user.name}!</h1>
-                <p className="text-muted-foreground">Your personal library dashboard.</p>
+            <header className="mb-8 flex justify-between items-start">
+                <div>
+                    <h1 className="text-4xl font-bold font-headline text-primary-foreground">Welcome, {user.name}!</h1>
+                    <p className="text-muted-foreground">Your personal library dashboard.</p>
+                </div>
+                <Button variant="outline" onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                </Button>
             </header>
 
             <main>
@@ -181,4 +191,3 @@ export default function UserDashboard() {
         </div>
     );
 }
-

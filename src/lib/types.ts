@@ -1,0 +1,33 @@
+
+export interface Book {
+  id: string;
+  title: string;
+  author: string;
+  language: string;
+  status: 'Available' | 'Issued' | 'Requested';
+  issuedTo?: string; // userId
+  userName?: string; // user name
+  issueDate?: string; // ISO string
+  dueDate?: string; // ISO string
+}
+
+export interface User {
+  id: string;
+  name: string;
+  role: 'admin' | 'user';
+  // A real app would not store passwords in this way
+  password?: string;
+}
+
+export interface BorrowingHistoryEntry {
+  bookId: string;
+  title: string;
+  issueDate: string; // ISO string
+  returnDate?: string; // ISO string
+  dueDate: string; // ISO string
+}
+
+export interface UserBorrowingHistory {
+  userId: string;
+  history: BorrowingHistoryEntry[];
+}

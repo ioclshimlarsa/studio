@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Bareta Mobile Library',
+  title: 'Sarb Sukh Sanjhi library - Bareta Mansa Punjab',
   description: 'A mobile library management app.',
 };
 
@@ -27,5 +27,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    

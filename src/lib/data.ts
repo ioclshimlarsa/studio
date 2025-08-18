@@ -3,9 +3,11 @@ import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
 import { subDays, addDays, formatISO } from 'date-fns';
 
 export const users: User[] = [
-  { id: 'admin01', name: 'Admin', role: 'admin', password: 'password' },
-  { id: 'user01', name: 'Alice', role: 'user', password: 'password' },
-  { id: 'user02', name: 'Bob', role: 'user', password: 'password' },
+  { id: 'admin01', name: 'Admin', email: 'admin@library.com', role: 'admin', password: 'password', status: 'active' },
+  { id: 'user01', name: 'Alice', email: 'alice@example.com', role: 'user', password: 'password', status: 'active' },
+  { id: 'user02', name: 'Bob', email: 'bob@example.com', role: 'user', password: 'password', status: 'active' },
+  { id: 'user03', name: 'Charlie', email: 'charlie@example.com', role: 'user', password: 'password', status: 'inactive' },
+  { id: 'user04', name: 'Diana', email: 'diana@example.com', role: 'user', password: 'password', status: 'blocked' },
 ];
 
 export const books: Book[] = [

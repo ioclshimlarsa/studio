@@ -14,7 +14,9 @@ export interface Book {
 export interface User {
   id: string;
   name: string;
+  email: string;
   role: 'admin' | 'user';
+  status: 'active' | 'inactive' | 'blocked';
   // A real app would not store passwords in this way
   password?: string;
 }

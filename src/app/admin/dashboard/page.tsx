@@ -2,18 +2,21 @@
 'use client';
 
 import { useState } from 'react';
-import { books, histories, bookDemands } from '@/lib/data';
-import type { Book, UserBorrowingHistory } from '@/lib/types';
+import { books, histories, bookDemands, users } from '@/lib/data';
+import type { Book, UserBorrowingHistory, User } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut } from 'lucide-react';
+import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban } from 'lucide-react';
 import { ReminderDialog } from '@/components/admin/reminder-dialog';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { CreateUserForm } from '@/components/admin/create-user-form';
+import { useToast } from '@/hooks/use-toast';
+import { updateUserStatus, resetUserPassword } from '@/lib/actions';
 
 const bookRequests = books.filter((book) => book.status === 'Requested');
 const overdueBooks = books.filter((book) => 
@@ -25,6 +28,10 @@ export default function AdminDashboard() {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [isReminderOpen, setReminderOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('requests');
+  const { toast } = useToast();
+  // Force a re-render when user data changes
+  const [userVersion, setUserVersion] = useState(0); 
+  const allUsers = users;
 
   const handleSendReminder = (book: Book) => {
     setSelectedBook(book);
@@ -38,6 +45,28 @@ export default function AdminDashboard() {
   const handleLogout = () => {
     window.location.href = '/';
   };
+
+  const handleStatusChange = async (userId: string, status: 'active' | 'inactive' | 'blocked') => {
+    const result = await updateUserStatus(userId, status);
+    if (result.success) {
+      toast({ title: 'Success', description: result.message });
+      setUserVersion(v => v + 1); // Trigger re-render
+    } else {
+      toast({ title: 'Error', description: result.message, variant: 'destructive' });
+    }
+  };
+
+  const handlePasswordReset = async (userId: string) => {
+    if(confirm('Are you sure you want to reset the password for this user?')) {
+        const result = await resetUserPassword(userId);
+        if (result.success) {
+            toast({ title: 'Password Reset', description: result.message });
+        } else {
+            toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        }
+    }
+  };
+
 
   return (
     <div className="min-h-screen p-4 md:p-8">
@@ -54,7 +83,7 @@ export default function AdminDashboard() {
       
       <main>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 max-w-4xl mx-auto">
+          <TabsList className="grid w-full grid-cols-6 max-w-6xl mx-auto">
             <TabsTrigger value="requests">
               <BookUp className="mr-2 h-4 w-4" /> Requests <Badge variant="destructive" className="ml-2">{bookRequests.length}</Badge>
             </TabsTrigger>
@@ -69,6 +98,9 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="add_books">
               <PlusCircle className="mr-2 h-4 w-4" /> Add Books
+            </TabsTrigger>
+            <TabsTrigger value="manage_users">
+              <Users className="mr-2 h-4 w-4" /> Manage Users
             </TabsTrigger>
           </TabsList>
           
@@ -270,6 +302,59 @@ export default function AdminDashboard() {
                 </Card>
             </div>
           </TabsContent>
+          <TabsContent value="manage_users">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-1">
+                <CreateUserForm />
+              </div>
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>All Users</CardTitle>
+                    <CardDescription>View and manage all registered users.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>User ID</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {allUsers.filter(u => u.role === 'user').map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium">{user.name}</TableCell>
+                            <TableCell>{user.id}</TableCell>
+                            <TableCell>
+                              <Badge variant={user.status === 'active' ? 'secondary' : user.status === 'inactive' ? 'outline' : 'destructive'} className="capitalize">
+                                {user.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right space-x-2">
+                              {user.status === 'active' && (
+                                <>
+                                  <Button size="sm" variant="outline" onClick={() => handleStatusChange(user.id, 'inactive')}><CircleSlash className="mr-1 h-3 w-3" /> Inactive</Button>
+                                  <Button size="sm" variant="destructive" onClick={() => handleStatusChange(user.id, 'blocked')}><Ban className="mr-1 h-3 w-3" /> Block</Button>
+                                </>
+                              )}
+                              {(user.status === 'inactive' || user.status === 'blocked') && (
+                                <Button size="sm" variant="outline" onClick={() => handleStatusChange(user.id, 'active')}><CheckCircle className="mr-1 h-3 w-3" /> Activate</Button>
+                              )}
+                              <Button size="sm" variant="secondary" onClick={() => handlePasswordReset(user.id)}><KeyRound className="mr-1 h-3 w-3" /> Reset Pass</Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
         </Tabs>
       </main>
 

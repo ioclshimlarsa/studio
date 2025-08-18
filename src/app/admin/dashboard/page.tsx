@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban, Trash2 } from 'lucide-react';
+import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban, Trash2, FileDown } from 'lucide-react';
 import { ReminderDialog } from '@/components/admin/reminder-dialog';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,8 @@ import { Input } from '@/components/ui/input';
 import { CreateUserForm } from '@/components/admin/create-user-form';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserStatus, resetUserPassword, removeBook } from '@/lib/actions';
+import { downloadCSV } from '@/lib/utils';
+
 
 const bookRequests = books.filter((book) => book.status === 'Requested');
 const overdueBooks = books.filter((book) => 
@@ -82,6 +84,37 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDownloadReport = (reportType: 'books' | 'transactions' | 'demands' | 'users') => {
+    let data: any[] = [];
+    let filename = '';
+    
+    switch (reportType) {
+      case 'books':
+        data = allBooks;
+        filename = 'all_books_report.csv';
+        break;
+      case 'transactions':
+        data = histories.flatMap(h => h.history.map(entry => ({ userId: h.userId, ...entry })));
+        filename = 'all_transactions_report.csv';
+        break;
+      case 'demands':
+        data = bookDemands;
+        filename = 'book_demands_report.csv';
+        break;
+      case 'users':
+        data = allUsers.map(({ password, ...user }) => user); // Exclude password from report
+        filename = 'all_users_report.csv';
+        break;
+    }
+
+    if (data.length > 0) {
+      downloadCSV(data, filename);
+      toast({ title: 'Report Generated', description: `${filename} has been downloaded.` });
+    } else {
+      toast({ title: 'No Data', description: 'There is no data to generate a report.', variant: 'destructive' });
+    }
+  };
+
 
   return (
     <div className="min-h-screen p-4 md:p-8">
@@ -98,7 +131,7 @@ export default function AdminDashboard() {
       
       <main>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 max-w-6xl mx-auto">
+          <TabsList className="grid w-full grid-cols-7 max-w-6xl mx-auto">
             <TabsTrigger value="requests">
               <BookUp className="mr-2 h-4 w-4" /> Requests <Badge variant="destructive" className="ml-2">{bookRequests.length}</Badge>
             </TabsTrigger>
@@ -116,6 +149,9 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="manage_users">
               <Users className="mr-2 h-4 w-4" /> Manage Users
+            </TabsTrigger>
+            <TabsTrigger value="reports">
+              <FileDown className="mr-2 h-4 w-4" /> Reports
             </TabsTrigger>
           </TabsList>
           
@@ -374,6 +410,33 @@ export default function AdminDashboard() {
                 </Card>
               </div>
             </div>
+          </TabsContent>
+          
+          <TabsContent value="reports">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Generate Reports</CardTitle>
+                    <CardDescription>Download various library data reports in CSV format.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Button variant="outline" onClick={() => handleDownloadReport('books')}>
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Download All Books
+                    </Button>
+                    <Button variant="outline" onClick={() => handleDownloadReport('transactions')}>
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Download Transactions
+                    </Button>
+                    <Button variant="outline" onClick={() => handleDownloadReport('demands')}>
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Download Book Demands
+                    </Button>
+                    <Button variant="outline" onClick={() => handleDownloadReport('users')}>
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Download User List
+                    </Button>
+                </CardContent>
+            </Card>
           </TabsContent>
 
         </Tabs>

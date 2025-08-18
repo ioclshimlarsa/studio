@@ -9,9 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, BookCheck, BookUp, Check, Clock, Library, X } from 'lucide-react';
+import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X } from 'lucide-react';
 import { ReminderDialog } from '@/components/admin/reminder-dialog';
 import { differenceInDays, parseISO } from 'date-fns';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 const bookRequests = books.filter((book) => book.status === 'Requested');
 const overdueBooks = books.filter((book) => 
@@ -42,7 +44,7 @@ export default function AdminDashboard() {
       
       <main>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto">
+          <TabsList className="grid w-full grid-cols-4 max-w-2xl mx-auto">
             <TabsTrigger value="requests">
               <BookUp className="mr-2 h-4 w-4" /> Requests <Badge variant="destructive" className="ml-2">{bookRequests.length}</Badge>
             </TabsTrigger>
@@ -51,6 +53,9 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="all_books">
               <Library className="mr-2 h-4 w-4" /> All Books
+            </TabsTrigger>
+            <TabsTrigger value="add_books">
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Books
             </TabsTrigger>
           </TabsList>
           
@@ -164,6 +169,52 @@ export default function AdminDashboard() {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="add_books">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Add a New Book</CardTitle>
+                        <CardDescription>Manually enter book details.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="title">Title</Label>
+                                <Input id="title" placeholder="e.g., The Great Gatsby" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="author">Author</Label>
+                                <Input id="author" placeholder="e.g., F. Scott Fitzgerald" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="language">Language</Label>
+                                <Input id="language" placeholder="e.g., English" />
+                            </div>
+                            <Button type="submit" className="w-full">
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Book
+                            </Button>
+                        </form>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Bulk Upload</CardTitle>
+                        <CardDescription>Add multiple books from a CSV file.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col items-center justify-center space-y-4 h-full">
+                        <div className="flex flex-col items-center space-y-2 text-center">
+                            <Upload className="h-12 w-12 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">Drag & drop a CSV file here, or click to select a file.</p>
+                        </div>
+                         <Button variant="outline">
+                           <Upload className="mr-2 h-4 w-4" /> Choose File
+                        </Button>
+                        <p className="text-xs text-muted-foreground">CSV format: title, author, language</p>
+                    </CardContent>
+                </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </main>

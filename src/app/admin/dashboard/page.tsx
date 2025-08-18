@@ -3,13 +3,13 @@
 
 import { useState } from 'react';
 import { books, histories, bookDemands, users } from '@/lib/data';
-import type { Book, UserBorrowingHistory, User } from '@/lib/types';
+import type { Book, UserBorrowingHistory, User, BorrowingHistoryEntry } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban, Trash2, FileDown } from 'lucide-react';
+import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban, Trash2, FileDown, History } from 'lucide-react';
 import { ReminderDialog } from '@/components/admin/reminder-dialog';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,7 @@ import { CreateUserForm } from '@/components/admin/create-user-form';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserStatus, resetUserPassword, removeBook } from '@/lib/actions';
 import { downloadCSV } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const bookRequests = books.filter((book) => book.status === 'Requested');
@@ -34,6 +35,7 @@ export default function AdminDashboard() {
   // Force a re-render when user/book data changes
   const [userVersion, setUserVersion] = useState(0); 
   const [bookVersion, setBookVersion] = useState(0); 
+  const [selectedHistoryUserId, setSelectedHistoryUserId] = useState<string | null>(null);
 
   const allUsers = users;
   const allBooks = books;
@@ -114,6 +116,8 @@ export default function AdminDashboard() {
       toast({ title: 'No Data', description: 'There is no data to generate a report.', variant: 'destructive' });
     }
   };
+  
+  const selectedUserHistory = selectedHistoryUserId ? getHistoryForUser(selectedHistoryUserId)?.history : [];
 
 
   return (
@@ -121,7 +125,7 @@ export default function AdminDashboard() {
       <header className="mb-8 flex justify-between items-start">
         <div>
             <h1 className="text-4xl font-bold font-headline text-foreground">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Manage your library with ease.</p>
+            <p className="text-muted-foreground">Sarb Sukh Sanjhi library - Bareta Mansa Punjab</p>
         </div>
         <Button variant="outline" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
@@ -131,7 +135,7 @@ export default function AdminDashboard() {
       
       <main>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7 max-w-6xl mx-auto">
+          <TabsList className="grid w-full grid-cols-8 max-w-6xl mx-auto">
             <TabsTrigger value="requests">
               <BookUp className="mr-2 h-4 w-4" /> Requests <Badge variant="destructive" className="ml-2">{bookRequests.length}</Badge>
             </TabsTrigger>
@@ -149,6 +153,9 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="manage_users">
               <Users className="mr-2 h-4 w-4" /> Manage Users
+            </TabsTrigger>
+            <TabsTrigger value="user_history">
+                <History className="mr-2 h-4 w-4" /> User History
             </TabsTrigger>
             <TabsTrigger value="reports">
               <FileDown className="mr-2 h-4 w-4" /> Reports
@@ -410,6 +417,63 @@ export default function AdminDashboard() {
                 </Card>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="user_history">
+            <Card>
+                <CardHeader>
+                    <CardTitle>User Borrowing History</CardTitle>
+                    <CardDescription>Select a user to view their complete transaction history.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="max-w-xs">
+                        <Label htmlFor="user-select">Select User</Label>
+                        <Select onValueChange={setSelectedHistoryUserId}>
+                            <SelectTrigger id="user-select">
+                                <SelectValue placeholder="Select a user..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {allUsers.filter(u => u.role === 'user').map(user => (
+                                    <SelectItem key={user.id} value={user.id}>
+                                        {user.name} ({user.id})
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {selectedHistoryUserId && (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Book Title</TableHead>
+                                    <TableHead>Issue Date</TableHead>
+                                    <TableHead>Due Date</TableHead>
+                                    <TableHead>Return Date</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {selectedUserHistory && selectedUserHistory.length > 0 ? (
+                                    selectedUserHistory.map((entry: BorrowingHistoryEntry) => (
+                                        <TableRow key={entry.bookId + entry.issueDate}>
+                                            <TableCell className="font-medium">{entry.title}</TableCell>
+                                            <TableCell>{format(parseISO(entry.issueDate), 'PPP')}</TableCell>
+                                            <TableCell>{format(parseISO(entry.dueDate), 'PPP')}</TableCell>
+                                            <TableCell>
+                                                {entry.returnDate ? format(parseISO(entry.returnDate), 'PPP') : <Badge variant="outline">Not Returned</Badge>}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center">No borrowing history for this user.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
           </TabsContent>
           
           <TabsContent value="reports">

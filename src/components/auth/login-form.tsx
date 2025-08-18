@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
-import { useEffect } from 'react';
+import { useActionState, useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
 
 import { login } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ function SubmitButton() {
 }
 
 export function LoginForm() {
-  const [state, formAction] = useFormState(login, undefined);
+  const [state, formAction] = useActionState(login, undefined);
 
   useEffect(() => {
     if (state?.success) {

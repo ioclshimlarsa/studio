@@ -84,7 +84,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDownloadReport = (reportType: 'books' | 'transactions' | 'demands' | 'users') => {
+  const handleDownloadReport = async (reportType: 'books' | 'transactions' | 'demands' | 'users') => {
     let data: any[] = [];
     let filename = '';
     
@@ -108,7 +108,7 @@ export default function AdminDashboard() {
     }
 
     if (data.length > 0) {
-      downloadCSV(data, filename);
+      await downloadCSV(data, filename);
       toast({ title: 'Report Generated', description: `${filename} has been downloaded.` });
     } else {
       toast({ title: 'No Data', description: 'There is no data to generate a report.', variant: 'destructive' });

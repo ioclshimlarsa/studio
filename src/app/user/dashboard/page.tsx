@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Book, BookCheck, History, Library, User } from 'lucide-react';
+import { Book, BookCheck, History, Library, User, Hand, PlusCircle } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 // This is a mock. In a real app, you'd get this from session/auth.
 const MOCK_USER_ID = 'user01'; 
@@ -31,7 +33,7 @@ export default function UserDashboard() {
 
             <main>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto">
+                    <TabsList className="grid w-full grid-cols-4 max-w-xl mx-auto">
                         <TabsTrigger value="my_books">
                             <BookCheck className="mr-2 h-4 w-4" /> My Books
                         </TabsTrigger>
@@ -40,6 +42,9 @@ export default function UserDashboard() {
                         </TabsTrigger>
                         <TabsTrigger value="history">
                             <History className="mr-2 h-4 w-4" /> History
+                        </TabsTrigger>
+                        <TabsTrigger value="demand">
+                            <Hand className="mr-2 h-4 w-4" /> Demand a Book
                         </TabsTrigger>
                     </TabsList>
 
@@ -147,8 +152,33 @@ export default function UserDashboard() {
                             </CardContent>
                         </Card>
                     </TabsContent>
+
+                     <TabsContent value="demand">
+                        <Card className="max-w-2xl mx-auto">
+                            <CardHeader>
+                                <CardTitle>Demand a New Book</CardTitle>
+                                <CardDescription>Can't find a book you're looking for? Request it here!</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <form className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="demand-title">Book Title</Label>
+                                        <Input id="demand-title" placeholder="e.g., The Lord of the Rings" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="demand-author">Author</Label>
+                                        <Input id="demand-author" placeholder="e.g., J.R.R. Tolkien" />
+                                    </div>
+                                    <Button type="submit" className="w-full">
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Submit Demand
+                                    </Button>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
                 </Tabs>
             </main>
         </div>
     );
 }
+

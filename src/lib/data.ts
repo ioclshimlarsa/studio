@@ -1,5 +1,5 @@
 
-import type { User, Book, UserBorrowingHistory } from './types';
+import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
 import { subDays, addDays, formatISO } from 'date-fns';
 
 export const users: User[] = [
@@ -34,4 +34,9 @@ export const histories: UserBorrowingHistory[] = [
       { bookId: 'B008', title: 'Don Quixote', issueDate: formatISO(subDays(new Date(), 80)), returnDate: formatISO(subDays(new Date(), 62)), dueDate: formatISO(subDays(new Date(), 65)) }, // Returned late
     ],
   },
+];
+
+export const bookDemands: BookDemand[] = [
+    { id: 'D001', title: 'The Lord of the Rings', author: 'J.R.R. Tolkien', requestedBy: 'Alice', date: formatISO(subDays(new Date(), 2)) },
+    { id: 'D002', title: 'The Hobbit', author: 'J.R.R. Tolkien', requestedBy: 'Bob', date: formatISO(subDays(new Date(), 5)) },
 ];

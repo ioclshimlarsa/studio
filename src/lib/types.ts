@@ -21,7 +21,7 @@ export interface User {
 
 export interface BorrowingHistoryEntry {
   bookId: string;
-  title: string;
+  title:string;
   issueDate: string; // ISO string
   returnDate?: string; // ISO string
   dueDate: string; // ISO string
@@ -30,4 +30,12 @@ export interface BorrowingHistoryEntry {
 export interface UserBorrowingHistory {
   userId: string;
   history: BorrowingHistoryEntry[];
+}
+
+export interface BookDemand {
+    id: string;
+    title: string;
+    author: string;
+    requestedBy: string; // userName
+    date: string; // ISO string
 }

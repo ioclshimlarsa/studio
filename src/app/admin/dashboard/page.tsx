@@ -2,16 +2,16 @@
 'use client';
 
 import { useState } from 'react';
-import { books, histories, users } from '@/lib/data';
+import { books, histories, bookDemands } from '@/lib/data';
 import type { Book, UserBorrowingHistory } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X } from 'lucide-react';
+import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand } from 'lucide-react';
 import { ReminderDialog } from '@/components/admin/reminder-dialog';
-import { differenceInDays, parseISO } from 'date-fns';
+import { differenceInDays, parseISO, format } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 
@@ -44,12 +44,15 @@ export default function AdminDashboard() {
       
       <main>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl mx-auto">
+          <TabsList className="grid w-full grid-cols-5 max-w-4xl mx-auto">
             <TabsTrigger value="requests">
               <BookUp className="mr-2 h-4 w-4" /> Requests <Badge variant="destructive" className="ml-2">{bookRequests.length}</Badge>
             </TabsTrigger>
             <TabsTrigger value="overdue">
               <Bell className="mr-2 h-4 w-4" /> Overdue <Badge variant="destructive" className="ml-2">{overdueBooks.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="demands">
+                <Hand className="mr-2 h-4 w-4" /> Demands <Badge variant="destructive" className="ml-2">{bookDemands.length}</Badge>
             </TabsTrigger>
             <TabsTrigger value="all_books">
               <Library className="mr-2 h-4 w-4" /> All Books
@@ -129,6 +132,47 @@ export default function AdminDashboard() {
                       </TableRow>
                     )) : (
                         <TableRow><TableCell colSpan={5} className="text-center">No overdue books.</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="demands">
+            <Card>
+              <CardHeader>
+                <CardTitle>New Book Demands</CardTitle>
+                <CardDescription>Users have requested these books to be added to the library.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Book Title</TableHead>
+                      <TableHead>Author</TableHead>
+                      <TableHead>Requested By</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bookDemands.length > 0 ? bookDemands.map((demand) => (
+                      <TableRow key={demand.id}>
+                        <TableCell className="font-medium">{demand.title}</TableCell>
+                        <TableCell>{demand.author}</TableCell>
+                        <TableCell>{demand.requestedBy}</TableCell>
+                        <TableCell>{format(parseISO(demand.date), 'PPP')}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="outline" onClick={() => {
+                            setActiveTab('add_books');
+                          }}>
+                            Add Book
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )) : (
+                        <TableRow><TableCell colSpan={5} className="text-center">No new book demands.</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>

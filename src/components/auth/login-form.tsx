@@ -17,7 +17,7 @@ function SubmitButton() {
   return (
     <Button type="submit" className="w-full" disabled={pending}>
       {pending ? 'Signing In...' : 'Sign In'}
-      <ArrowRight className="ml-2" />
+      <ArrowRight className="ml-auto" />
     </Button>
   );
 }
@@ -36,7 +36,7 @@ export function LoginForm() {
   }, [state]);
 
   return (
-    <Card className="w-full max-w-sm shadow-2xl">
+    <Card className="w-full shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl">Welcome Back!</CardTitle>
         <CardDescription>Enter your credentials to access your account.</CardDescription>
@@ -74,3 +74,5 @@ export function LoginForm() {
     </Card>
   );
 }
+
+    

@@ -117,10 +117,10 @@ export default function AdminDashboard() {
 
 
   return (
-    <div className="min-h-screen p-4 md:p-8">
+    <div className="min-h-screen bg-muted/40 p-4 md:p-8">
       <header className="mb-8 flex justify-between items-start">
         <div>
-            <h1 className="text-4xl font-bold font-headline text-primary-foreground">Admin Dashboard</h1>
+            <h1 className="text-4xl font-bold font-headline text-foreground">Admin Dashboard</h1>
             <p className="text-muted-foreground">Manage your library with ease.</p>
         </div>
         <Button variant="outline" onClick={handleLogout}>
@@ -453,3 +453,5 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+    

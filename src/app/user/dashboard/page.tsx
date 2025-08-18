@@ -28,10 +28,10 @@ export default function UserDashboard() {
     };
 
     return (
-        <div className="min-h-screen p-4 md:p-8">
+        <div className="min-h-screen bg-muted/40 p-4 md:p-8">
             <header className="mb-8 flex justify-between items-start">
                 <div>
-                    <h1 className="text-4xl font-bold font-headline text-primary-foreground">Welcome, {user.name}!</h1>
+                    <h1 className="text-4xl font-bold font-headline text-foreground">Welcome, {user.name}!</h1>
                     <p className="text-muted-foreground">Your personal library dashboard.</p>
                 </div>
                 <Button variant="outline" onClick={handleLogout}>
@@ -194,3 +194,5 @@ export default function UserDashboard() {
         </div>
     );
 }
+
+    

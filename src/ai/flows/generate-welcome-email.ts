@@ -35,12 +35,12 @@ const prompt = ai.definePrompt({
   name: 'generateWelcomeEmailPrompt',
   input: {schema: WelcomeEmailInputSchema},
   output: {schema: WelcomeEmailOutputSchema},
-  prompt: `You are an AI assistant for LibraryLite. Your task is to generate a warm and informative welcome email for a new user.
+  prompt: `You are an AI assistant for Bareta Mobile Library. Your task is to generate a warm and informative welcome email for a new user.
 
   The email should:
   1. Have a welcoming subject line.
   2. Greet the user by their name.
-  3. Welcome them to LibraryLite.
+  3. Welcome them to Bareta Mobile Library.
   4. Provide them with their new User ID.
   5. Briefly explain that they can browse books, request them, and manage their account.
   6. End with a friendly closing.
@@ -72,3 +72,5 @@ const generateWelcomeEmailFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    

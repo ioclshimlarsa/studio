@@ -2,7 +2,7 @@
 'use server';
 
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 
 // Note: In a real-world application, you would use a database.
@@ -12,52 +12,53 @@ import path from 'path';
 
 const dataPath = path.join(process.cwd(), 'src', 'lib', 'data');
 
-const readData = <T>(filename: string): T[] => {
+const readData = async <T>(filename: string): Promise<T[]> => {
   const filePath = path.join(dataPath, filename);
   try {
     // Check if the file exists before reading
-    if (!fs.existsSync(filePath)) {
-        // If it doesn't exist (e.g., in a fresh deployment), return an empty array
-        return [];
-    }
-    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    await fs.access(filePath);
+    const fileContent = await fs.readFile(filePath, 'utf-8');
     // Handle case where file is empty
     if (fileContent.trim() === '') {
         return [];
     }
     return JSON.parse(fileContent);
-  } catch (error) {
+  } catch (error: any) {
+    // If file doesn't exist (ENOENT), return empty array, otherwise log error
+    if (error.code === 'ENOENT') {
+        return [];
+    }
     console.error(`Error reading ${filename}:`, error);
     return [];
   }
 };
 
-const writeData = <T>(filename: string, data: T[]): void => {
+const writeData = async <T>(filename: string, data: T[]): Promise<void> => {
     const filePath = path.join(dataPath, filename);
     try {
         // Ensure the directory exists
-        fs.mkdirSync(path.dirname(filePath), { recursive: true });
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+        await fs.mkdir(path.dirname(filePath), { recursive: true });
+        await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
     } catch (error) {
         console.error(`Error writing to ${filename}:`, error);
     }
 }
 
-export const getUsers = (): User[] => readData<User>('users.json');
-export const getBooks = (): Book[] => readData<Book>('books.json');
-export const getHistories = (): UserBorrowingHistory[] => readData<UserBorrowingHistory>('histories.json');
-export const getBookDemands = (): BookDemand[] => readData<BookDemand>('bookDemands.json');
+export const getUsers = async (): Promise<User[]> => readData<User>('users.json');
+export const getBooks = async (): Promise<Book[]> => readData<Book>('books.json');
+export const getHistories = async (): Promise<UserBorrowingHistory[]> => readData<UserBorrowingHistory>('histories.json');
+export const getBookDemands = async (): Promise<BookDemand[]> => readData<BookDemand>('bookDemands.json');
 
 
-export const saveUsers = (data: User[]) => writeData('users.json', data);
-export const saveBooks = (data: Book[]) => writeData('books.json', data);
-export const saveHistories = (data: UserBorrowingHistory[]) => writeData('histories.json', data);
-export const saveBookDemands = (data: BookDemand[]) => writeData('bookDemands.json', data);
+export const saveUsers = async (data: User[]) => writeData('users.json', data);
+export const saveBooks = async (data: Book[]) => writeData('books.json', data);
+export const saveHistories = async (data: UserBorrowingHistory[]) => writeData('histories.json', data);
+export const saveBookDemands = async (data: BookDemand[]) => writeData('bookDemands.json', data);
 
 // Initial data seeding if files are empty
-const seedData = () => {
-    if (getUsers().length === 0) {
-        saveUsers([
+const seedData = async () => {
+    if ((await getUsers()).length === 0) {
+        await saveUsers([
           {
             "id": "admin01",
             "name": "Admin",
@@ -100,8 +101,8 @@ const seedData = () => {
           }
         ]);
     }
-    if (getBooks().length === 0) {
-        saveBooks([
+    if ((await getBooks()).length === 0) {
+        await saveBooks([
           {
             "id": "B001",
             "title": "The Great Gatsby",
@@ -178,8 +179,8 @@ const seedData = () => {
           }
         ]);
     }
-    if (getHistories().length === 0) {
-        saveHistories([
+    if ((await getHistories()).length === 0) {
+        await saveHistories([
           {
             "userId": "user01",
             "history": [
@@ -220,8 +221,8 @@ const seedData = () => {
           }
         ]);
     }
-    if (getBookDemands().length === 0) {
-        saveBookDemands([
+    if ((await getBookDemands()).length === 0) {
+        await saveBookDemands([
             { 
                 "id": "D001", 
                 "title": "The Lord of the Rings", 

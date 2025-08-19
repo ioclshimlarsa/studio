@@ -110,25 +110,28 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDownloadReport = (reportType: 'books' | 'transactions' | 'demands' | 'users') => {
+  const handleDownloadReport = async (reportType: 'books' | 'transactions' | 'demands' | 'users') => {
     let data: any[] = [];
     let filename = '';
     
+    // We need to refetch the latest data before generating a report
+    const latestData = await getAdminDashboardData();
+    
     switch (reportType) {
       case 'books':
-        data = allBooks;
+        data = latestData.books;
         filename = 'all_books_report.csv';
         break;
       case 'transactions':
-        data = allHistories.flatMap(h => h.history.map(entry => ({ userId: h.userId, ...entry })));
+        data = latestData.histories.flatMap(h => h.history.map(entry => ({ userId: h.userId, ...entry })));
         filename = 'all_transactions_report.csv';
         break;
       case 'demands':
-        data = allBookDemands;
+        data = latestData.bookDemands;
         filename = 'book_demands_report.csv';
         break;
       case 'users':
-        data = allUsers.map(({ password, ...user }) => user); // Exclude password from report
+        data = latestData.users.map(({ password, ...user }) => user); // Exclude password from report
         filename = 'all_users_report.csv';
         break;
     }

@@ -214,7 +214,7 @@ export default function UserDashboard() {
                             <CardHeader>
                                 <CardTitle>Browse Library</CardTitle>
                                 <CardDescription>Find your next read and request it.</CardDescription>
-                            </CardHeader>
+                            </Header>
                             <CardContent>
                                 <Table>
                                     <TableHeader>

@@ -27,7 +27,7 @@ export async function login(prevState: any, formData: FormData) {
   }
   
   const { userId, password, role } = validatedFields.data;
-  const allUsers = getUsers();
+  const allUsers = await getUsers();
   const user = allUsers.find((u) => u.id === userId && u.role === role && u.password === password);
 
   if (!user) {
@@ -74,7 +74,7 @@ export async function createUser(prevState: any, formData: FormData) {
     }
 
     const { name, email, userId, password } = validatedFields.data;
-    const currentUsers = getUsers();
+    const currentUsers = await getUsers();
 
     if (currentUsers.some(u => u.id === userId)) {
         return { error: 'User ID already exists.' };
@@ -93,7 +93,7 @@ export async function createUser(prevState: any, formData: FormData) {
         status: 'active',
     };
     
-    saveUsers([...currentUsers, newUser]);
+    await saveUsers([...currentUsers, newUser]);
     
     try {
         await generateWelcomeEmail({ name, email, userId });
@@ -107,29 +107,29 @@ export async function createUser(prevState: any, formData: FormData) {
 }
 
 export async function updateUserStatus(userId: string, status: 'active' | 'inactive' | 'blocked') {
-    const currentUsers = getUsers();
+    const currentUsers = await getUsers();
     const userIndex = currentUsers.findIndex(u => u.id === userId);
     if (userIndex > -1) {
         currentUsers[userIndex].status = status;
-        saveUsers(currentUsers);
+        await saveUsers(currentUsers);
         return { success: true, message: `User status updated to ${status}.` };
     }
     return { success: false, message: 'User not found.' };
 }
 
 export async function resetUserPassword(userId: string) {
-    const currentUsers = getUsers();
+    const currentUsers = await getUsers();
     const userIndex = currentUsers.findIndex(u => u.id === userId);
     if (userIndex > -1) {
         currentUsers[userIndex].password = 'password';
-        saveUsers(currentUsers);
+        await saveUsers(currentUsers);
         return { success: true, message: `Password for ${currentUsers[userIndex].name} has been reset to "password".` };
     }
     return { success: false, message: 'User not found.' };
 }
 
 export async function removeBook(bookId: string) {
-    let currentBooks = getBooks();
+    let currentBooks = await getBooks();
     const bookIndex = currentBooks.findIndex(b => b.id === bookId);
     if (bookIndex > -1) {
         const book = currentBooks[bookIndex];
@@ -137,7 +137,7 @@ export async function removeBook(bookId: string) {
             return { success: false, message: `Cannot remove "${book.title}" because it is currently issued to a user.`};
         }
         currentBooks = currentBooks.filter(b => b.id !== bookId);
-        saveBooks(currentBooks);
+        await saveBooks(currentBooks);
         return { success: true, message: `Book "${book.title}" has been removed.` };
     }
     return { success: false, message: 'Book not found.' };
@@ -160,7 +160,7 @@ export async function addBook(prevState: any, formData: FormData) {
     }
     
     const { title, author, language } = validatedFields.data;
-    const currentBooks = getBooks();
+    const currentBooks = await getBooks();
     
     const newBook: Book = {
         id: `B${String(currentBooks.length + 1).padStart(3, '0')}_${uuidv4().slice(0,4)}`,
@@ -170,7 +170,7 @@ export async function addBook(prevState: any, formData: FormData) {
         status: 'Available',
     };
 
-    saveBooks([...currentBooks, newBook]);
+    await saveBooks([...currentBooks, newBook]);
 
     return { success: true, message: `Book "${title}" added successfully.` };
 }
@@ -192,7 +192,7 @@ export async function addBooksFromCSV(prevState: any, formData: FormData) {
             return { error: 'CSV file is empty or in an invalid format.' };
         }
         
-        const currentBooks = getBooks();
+        const currentBooks = await getBooks();
         const newBooks: Book[] = json.map((row, index) => {
              if (!row.title || !row.author || !row.language) {
                 throw new Error(`Row ${index + 2} is missing required fields (title, author, language).`);
@@ -206,7 +206,7 @@ export async function addBooksFromCSV(prevState: any, formData: FormData) {
             };
         });
 
-        saveBooks([...currentBooks, ...newBooks]);
+        await saveBooks([...currentBooks, ...newBooks]);
 
         return { success: true, message: `${newBooks.length} books added successfully from CSV.` };
 
@@ -217,8 +217,8 @@ export async function addBooksFromCSV(prevState: any, formData: FormData) {
 }
 
 export async function approveRequest(bookId: string) {
-    let currentBooks = getBooks();
-    let currentHistories = getHistories();
+    let currentBooks = await getBooks();
+    let currentHistories = await getHistories();
     const bookIndex = currentBooks.findIndex(b => b.id === bookId);
 
     if (bookIndex === -1 || currentBooks[bookIndex].status !== 'Requested') {
@@ -262,15 +262,15 @@ export async function approveRequest(bookId: string) {
     }
 
     
-    saveBooks(currentBooks);
-    saveHistories(currentHistories);
+    await saveBooks(currentBooks);
+    await saveHistories(currentHistories);
 
     return { success: true, message: `Book "${book.title}" has been issued.` };
 }
 
 
 export async function rejectRequest(bookId: string) {
-    let currentBooks = getBooks();
+    let currentBooks = await getBooks();
     const bookIndex = currentBooks.findIndex(b => b.id === bookId);
 
     if (bookIndex === -1 || currentBooks[bookIndex].status !== 'Requested') {
@@ -287,14 +287,14 @@ export async function rejectRequest(bookId: string) {
     delete book.issueDate;
     delete book.dueDate;
     
-    saveBooks(currentBooks);
+    await saveBooks(currentBooks);
 
     return { success: true, message: `Request for "${book.title}" by ${oldUserName} has been rejected.` };
 }
 
 
 export async function requestBook(bookId: string, userId: string, userName: string) {
-    let currentBooks = getBooks();
+    let currentBooks = await getBooks();
     const bookIndex = currentBooks.findIndex(b => b.id === bookId);
 
     if (bookIndex === -1 || currentBooks[bookIndex].status !== 'Available') {
@@ -305,14 +305,14 @@ export async function requestBook(bookId: string, userId: string, userName: stri
     currentBooks[bookIndex].issuedTo = userId;
     currentBooks[bookIndex].userName = userName;
 
-    saveBooks(currentBooks);
+    await saveBooks(currentBooks);
 
     return { success: true, message: 'Book requested successfully. Waiting for admin approval.' };
 }
 
 export async function returnBook(bookId: string, userId: string) {
-    let currentBooks = getBooks();
-    let currentHistories = getHistories();
+    let currentBooks = await getBooks();
+    let currentHistories = await getHistories();
     const bookIndex = currentBooks.findIndex(b => b.id === bookId && b.issuedTo === userId);
 
     if (bookIndex === -1) {
@@ -337,8 +337,8 @@ export async function returnBook(bookId: string, userId: string) {
         }
     }
 
-    saveBooks(currentBooks);
-    saveHistories(currentHistories);
+    await saveBooks(currentBooks);
+    await saveHistories(currentHistories);
 
     return { success: true, message: `Thank you for returning "${book.title}".` };
 }
@@ -356,7 +356,7 @@ export async function demandBook(userName: string, formData: FormData) {
   }
 
   const { title, author } = validatedFields.data;
-  const currentDemands = getBookDemands();
+  const currentDemands = await getBookDemands();
 
   const newDemand: BookDemand = {
     id: `D${String(currentDemands.length + 1).padStart(3, '0')}_${uuidv4().slice(0,4)}`,
@@ -366,7 +366,7 @@ export async function demandBook(userName: string, formData: FormData) {
     date: formatISO(new Date()),
   };
   
-  saveBookDemands([...currentDemands, newDemand]);
+  await saveBookDemands([...currentDemands, newDemand]);
 
   return { success: true, message: 'Your book demand has been submitted successfully.' };
 }
@@ -374,19 +374,21 @@ export async function demandBook(userName: string, formData: FormData) {
 // Action to get all data for the admin dashboard
 export async function getAdminDashboardData() {
     return {
-        users: getUsers(),
-        books: getBooks(),
-        histories: getHistories(),
-        bookDemands: getBookDemands(),
+        users: await getUsers(),
+        books: await getBooks(),
+        histories: await getHistories(),
+        bookDemands: await getBookDemands(),
     };
 }
 
 // Action to get data for a specific user's dashboard
 export async function getUserDashboardData(userId: string) {
-    const allBooks = getBooks();
-    const userHistory = getHistories().find(h => h.userId === userId);
+    const allBooks = await getBooks();
+    const allUsers = await getUsers();
+    const allHistories = await getHistories();
+    const userHistory = allHistories.find(h => h.userId === userId);
     return {
-        user: getUsers().find(u => u.id === userId),
+        user: allUsers.find(u => u.id === userId),
         allBooks,
         myHistory: userHistory?.history || [],
         myBooks: allBooks.filter(book => book.issuedTo === userId),

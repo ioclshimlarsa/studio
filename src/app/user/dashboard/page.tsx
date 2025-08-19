@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { books as getBooks, histories as getHistories, users as getUsers } from '@/lib/data';
-import type { Book, UserBorrowingHistory, User } from '@/lib/types';
+import { useState, useEffect, useCallback } from 'react';
+import { getUserDashboardData, returnBook, requestBook, demandBook } from '@/lib/actions';
+import type { Book, User, BorrowingHistoryEntry } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,45 +14,60 @@ import { format, parseISO, differenceInDays } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { returnBook, requestBook, demandBook } from '@/lib/actions';
 import { useFormStatus } from 'react-dom';
+import { Skeleton } from '@/components/ui/skeleton';
 
-
-function getLoggedInUser(): User | undefined {
-    if (typeof window === 'undefined') return undefined;
-    const userId = localStorage.getItem('loggedInUserId');
-    if (!userId) return undefined;
-    return getUsers().find(u => u.id === userId);
+function getLoggedInUserId(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('loggedInUserId');
 }
-
 
 export default function UserDashboard() {
     const [activeTab, setActiveTab] = useState('my_books');
     const { toast } = useToast();
-    const [dataVersion, setDataVersion] = useState(0); 
-    const [user, setUser] = useState<User | undefined>(undefined);
+    
+    const [user, setUser] = useState<User | undefined | null>(undefined);
+    const [allBooks, setAllBooks] = useState<Book[]>([]);
+    const [myHistory, setMyHistory] = useState<BorrowingHistoryEntry[]>([]);
+    const [myBooks, setMyBooks] = useState<Book[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const forceRerender = () => {
-        setDataVersion(v => v + 1);
-    };
+    const forceRerender = useCallback(async () => {
+        setIsLoading(true);
+        const userId = getLoggedInUserId();
+        if (!userId) {
+            if (typeof window !== 'undefined') window.location.href = '/';
+            return;
+        }
+
+        try {
+            const data = await getUserDashboardData(userId);
+            if (!data.user) {
+                toast({ title: 'Error', description: 'Could not find user data.', variant: 'destructive'});
+                if (typeof window !== 'undefined') window.location.href = '/';
+                return;
+            }
+            setUser(data.user);
+            setAllBooks(data.allBooks);
+            setMyHistory(data.myHistory);
+            setMyBooks(data.myBooks);
+        } catch (error) {
+             toast({ title: 'Error', description: 'Failed to load dashboard data.', variant: 'destructive'});
+        } finally {
+            setIsLoading(false);
+        }
+
+    }, [toast]);
 
     useEffect(() => {
-        const loggedInUser = getLoggedInUser();
-        if (!loggedInUser) {
-            window.location.href = '/';
-        } else {
-            setUser(loggedInUser);
-        }
-    }, [dataVersion]);
+        forceRerender();
+    }, [forceRerender]);
     
-    // Re-fetch data whenever dataVersion changes
-    const allBooks = getBooks();
-    const myHistory = user ? getHistories().find((h) => h.userId === user.id)?.history || [] : [];
-    const myBooks = user ? allBooks.filter((book) => book.issuedTo === user.id) : [];
-
     const handleLogout = () => {
-        localStorage.removeItem('loggedInUserId');
-        window.location.href = '/';
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('loggedInUserId');
+            window.location.href = '/';
+        }
     };
     
     const handleReturnBook = async (bookId: string) => {
@@ -77,10 +92,39 @@ export default function UserDashboard() {
         }
     };
 
-    if (!user) {
+    if (isLoading) {
         return (
+            <div className="min-h-screen bg-muted/40 p-4 md:p-8">
+                 <header className="mb-8 flex justify-between items-start">
+                    <div>
+                        <Skeleton className="h-10 w-64" />
+                        <Skeleton className="h-4 w-48 mt-2" />
+                    </div>
+                    <Skeleton className="h-10 w-24" />
+                </header>
+                <main>
+                    <Card>
+                        <CardHeader>
+                            <Skeleton className="h-8 w-1/3" />
+                            <Skeleton className="h-4 w-1/2" />
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-4">
+                            <div className="border rounded-md p-4">
+                                <Skeleton className="h-6 w-full mb-4" />
+                                <Skeleton className="h-6 w-full mb-4" />
+                                <Skeleton className="h-6 w-full" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </main>
+            </div>
+        );
+    }
+    
+    if (!user) {
+         return (
             <div className="flex min-h-screen items-center justify-center">
-                <p>Loading user data...</p>
+                <p>Redirecting to login...</p>
             </div>
         );
     }
@@ -109,7 +153,7 @@ export default function UserDashboard() {
 
             <main>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-4 max-w-xl mx-auto">
+                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 max-w-xl mx-auto h-auto">
                         <TabsTrigger value="my_books">
                             <BookCheck className="mr-2 h-4 w-4" /> My Books
                         </TabsTrigger>
@@ -242,10 +286,15 @@ export default function UserDashboard() {
                             <CardContent>
                                 <form action={async (formData) => {
                                     if (!user) return;
+                                    const form = formData.get('title') && formData.get('author');
+                                    if (!form) return;
+                                    
                                     const result = await demandBook(user.name, formData);
                                      if (result.success) {
                                         toast({ title: 'Success', description: result.message });
                                         // Reset form manually if needed
+                                        const formElement = document.querySelector('form');
+                                        formElement?.reset();
                                     } else {
                                         toast({ title: 'Error', description: result.error, variant: 'destructive' });
                                     }
@@ -268,4 +317,3 @@ export default function UserDashboard() {
         </div>
     );
 }
-

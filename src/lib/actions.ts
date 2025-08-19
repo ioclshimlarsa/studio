@@ -4,7 +4,7 @@
 import { generatePersonalizedReminder } from '@/ai/flows/generate-personalized-reminder';
 import { generateWelcomeEmail } from '@/ai/flows/generate-welcome-email';
 import { z } from 'zod';
-import { users, books, histories, saveUsers, saveBooks, saveHistories, bookDemands, saveBookDemands } from './data';
+import { getUsers, getBooks, getHistories, getBookDemands, saveUsers, saveBooks, saveHistories, saveBookDemands } from './data';
 import type { GeneratePersonalizedReminderInput } from '@/ai/flows/generate-personalized-reminder';
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
 import { read, utils } from 'xlsx';
@@ -27,7 +27,8 @@ export async function login(prevState: any, formData: FormData) {
   }
   
   const { userId, password, role } = validatedFields.data;
-  const user = users().find((u) => u.id === userId && u.role === role && u.password === password);
+  const allUsers = getUsers();
+  const user = allUsers.find((u) => u.id === userId && u.role === role && u.password === password);
 
   if (!user) {
     return { error: 'Invalid User ID, password, or role.' };
@@ -73,7 +74,7 @@ export async function createUser(prevState: any, formData: FormData) {
     }
 
     const { name, email, userId, password } = validatedFields.data;
-    const currentUsers = users();
+    const currentUsers = getUsers();
 
     if (currentUsers.some(u => u.id === userId)) {
         return { error: 'User ID already exists.' };
@@ -106,7 +107,7 @@ export async function createUser(prevState: any, formData: FormData) {
 }
 
 export async function updateUserStatus(userId: string, status: 'active' | 'inactive' | 'blocked') {
-    const currentUsers = users();
+    const currentUsers = getUsers();
     const userIndex = currentUsers.findIndex(u => u.id === userId);
     if (userIndex > -1) {
         currentUsers[userIndex].status = status;
@@ -117,7 +118,7 @@ export async function updateUserStatus(userId: string, status: 'active' | 'inact
 }
 
 export async function resetUserPassword(userId: string) {
-    const currentUsers = users();
+    const currentUsers = getUsers();
     const userIndex = currentUsers.findIndex(u => u.id === userId);
     if (userIndex > -1) {
         currentUsers[userIndex].password = 'password';
@@ -128,7 +129,7 @@ export async function resetUserPassword(userId: string) {
 }
 
 export async function removeBook(bookId: string) {
-    let currentBooks = books();
+    let currentBooks = getBooks();
     const bookIndex = currentBooks.findIndex(b => b.id === bookId);
     if (bookIndex > -1) {
         const book = currentBooks[bookIndex];
@@ -159,7 +160,7 @@ export async function addBook(prevState: any, formData: FormData) {
     }
     
     const { title, author, language } = validatedFields.data;
-    const currentBooks = books();
+    const currentBooks = getBooks();
     
     const newBook: Book = {
         id: `B${String(currentBooks.length + 1).padStart(3, '0')}_${uuidv4().slice(0,4)}`,
@@ -191,7 +192,7 @@ export async function addBooksFromCSV(prevState: any, formData: FormData) {
             return { error: 'CSV file is empty or in an invalid format.' };
         }
         
-        const currentBooks = books();
+        const currentBooks = getBooks();
         const newBooks: Book[] = json.map((row, index) => {
              if (!row.title || !row.author || !row.language) {
                 throw new Error(`Row ${index + 2} is missing required fields (title, author, language).`);
@@ -216,8 +217,8 @@ export async function addBooksFromCSV(prevState: any, formData: FormData) {
 }
 
 export async function approveRequest(bookId: string) {
-    let currentBooks = books();
-    let currentHistories = histories();
+    let currentBooks = getBooks();
+    let currentHistories = getHistories();
     const bookIndex = currentBooks.findIndex(b => b.id === bookId);
 
     if (bookIndex === -1 || currentBooks[bookIndex].status !== 'Requested') {
@@ -245,12 +246,21 @@ export async function approveRequest(bookId: string) {
         currentHistories.push(userHistory);
     }
     
-    userHistory.history.push({
-        bookId: book.id,
-        title: book.title,
-        issueDate: book.issueDate,
-        dueDate: book.dueDate,
-    });
+    const historyEntry = userHistory.history.find(entry => entry.bookId === book.id && !entry.returnDate);
+    
+    if (historyEntry) {
+        // This case should ideally not happen for a 'Requested' book, but as a safeguard
+        historyEntry.issueDate = book.issueDate;
+        historyEntry.dueDate = book.dueDate;
+    } else {
+        userHistory.history.push({
+            bookId: book.id,
+            title: book.title,
+            issueDate: book.issueDate,
+            dueDate: book.dueDate,
+        });
+    }
+
     
     saveBooks(currentBooks);
     saveHistories(currentHistories);
@@ -260,7 +270,7 @@ export async function approveRequest(bookId: string) {
 
 
 export async function rejectRequest(bookId: string) {
-    let currentBooks = books();
+    let currentBooks = getBooks();
     const bookIndex = currentBooks.findIndex(b => b.id === bookId);
 
     if (bookIndex === -1 || currentBooks[bookIndex].status !== 'Requested') {
@@ -284,7 +294,7 @@ export async function rejectRequest(bookId: string) {
 
 
 export async function requestBook(bookId: string, userId: string, userName: string) {
-    let currentBooks = books();
+    let currentBooks = getBooks();
     const bookIndex = currentBooks.findIndex(b => b.id === bookId);
 
     if (bookIndex === -1 || currentBooks[bookIndex].status !== 'Available') {
@@ -301,8 +311,8 @@ export async function requestBook(bookId: string, userId: string, userName: stri
 }
 
 export async function returnBook(bookId: string, userId: string) {
-    let currentBooks = books();
-    let currentHistories = histories();
+    let currentBooks = getBooks();
+    let currentHistories = getHistories();
     const bookIndex = currentBooks.findIndex(b => b.id === bookId && b.issuedTo === userId);
 
     if (bookIndex === -1) {
@@ -346,7 +356,7 @@ export async function demandBook(userName: string, formData: FormData) {
   }
 
   const { title, author } = validatedFields.data;
-  const currentDemands = bookDemands();
+  const currentDemands = getBookDemands();
 
   const newDemand: BookDemand = {
     id: `D${String(currentDemands.length + 1).padStart(3, '0')}_${uuidv4().slice(0,4)}`,
@@ -359,4 +369,26 @@ export async function demandBook(userName: string, formData: FormData) {
   saveBookDemands([...currentDemands, newDemand]);
 
   return { success: true, message: 'Your book demand has been submitted successfully.' };
+}
+
+// Action to get all data for the admin dashboard
+export async function getAdminDashboardData() {
+    return {
+        users: getUsers(),
+        books: getBooks(),
+        histories: getHistories(),
+        bookDemands: getBookDemands(),
+    };
+}
+
+// Action to get data for a specific user's dashboard
+export async function getUserDashboardData(userId: string) {
+    const allBooks = getBooks();
+    const userHistory = getHistories().find(h => h.userId === userId);
+    return {
+        user: getUsers().find(u => u.id === userId),
+        allBooks,
+        myHistory: userHistory?.history || [],
+        myBooks: allBooks.filter(book => book.issuedTo === userId),
+    };
 }

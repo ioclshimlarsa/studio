@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState } from 'react';
-import { books as getBooks, histories as getHistories, bookDemands as getBookDemands, users as getUsers } from '@/lib/data';
-import type { Book, UserBorrowingHistory, User, BorrowingHistoryEntry } from '@/lib/types';
+import { useState, useEffect, useCallback } from 'react';
+import { getAdminDashboardData, updateUserStatus, resetUserPassword, removeBook, approveRequest, rejectRequest } from '@/lib/actions';
+import type { Book, UserBorrowingHistory, User, BorrowingHistoryEntry, BookDemand } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,28 +18,42 @@ import { CreateUserForm } from '@/components/admin/create-user-form';
 import { CreateBookForm } from '@/components/admin/create-book-form';
 import { BulkUploadForm } from '@/components/admin/bulk-upload-form';
 import { useToast } from '@/hooks/use-toast';
-import { updateUserStatus, resetUserPassword, removeBook, approveRequest, rejectRequest } from '@/lib/actions';
 import { downloadCSV } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AdminDashboard() {
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allBooks, setAllBooks] = useState<Book[]>([]);
+  const [allHistories, setAllHistories] = useState<UserBorrowingHistory[]>([]);
+  const [allBookDemands, setAllBookDemands] = useState<BookDemand[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [isReminderOpen, setReminderOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('requests');
   const { toast } = useToast();
-  const [dataVersion, setDataVersion] = useState(0); 
   const [selectedHistoryUserId, setSelectedHistoryUserId] = useState<string | null>(null);
 
-  const forceRerender = () => {
-    setDataVersion(v => v + 1);
-  };
-  
-  // Re-fetch data whenever dataVersion changes
-  const allUsers = getUsers();
-  const allBooks = getBooks();
-  const allHistories = getHistories();
-  const allBookDemands = getBookDemands();
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await getAdminDashboardData();
+      setAllUsers(data.users);
+      setAllBooks(data.books);
+      setAllHistories(data.histories);
+      setAllBookDemands(data.bookDemands);
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to fetch dashboard data.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
 
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+  
   const bookRequests = allBooks.filter((book) => book.status === 'Requested');
   const overdueBooks = allBooks.filter((book) => 
     book.status === 'Issued' && book.dueDate && differenceInDays(new Date(), parseISO(book.dueDate)) > 0
@@ -56,14 +70,17 @@ export default function AdminDashboard() {
   }
 
   const handleLogout = () => {
-    window.location.href = '/';
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('loggedInUserId');
+      window.location.href = '/';
+    }
   };
 
   const handleStatusChange = async (userId: string, status: 'active' | 'inactive' | 'blocked') => {
     const result = await updateUserStatus(userId, status);
     if (result.success) {
       toast({ title: 'Success', description: result.message });
-      forceRerender();
+      fetchData();
     } else {
       toast({ title: 'Error', description: result.message, variant: 'destructive' });
     }
@@ -74,7 +91,7 @@ export default function AdminDashboard() {
         const result = await resetUserPassword(userId);
         if (result.success) {
             toast({ title: 'Password Reset', description: result.message });
-            forceRerender();
+            fetchData();
         } else {
             toast({ title: 'Error', description: result.message, variant: 'destructive' });
         }
@@ -86,7 +103,7 @@ export default function AdminDashboard() {
       const result = await removeBook(bookId);
       if (result.success) {
         toast({ title: 'Book Removed', description: result.message });
-        forceRerender();
+        fetchData();
       } else {
         toast({ title: 'Error', description: result.message, variant: 'destructive' });
       }
@@ -128,7 +145,7 @@ export default function AdminDashboard() {
     const result = await approveRequest(bookId);
      if (result.success) {
       toast({ title: 'Success', description: result.message });
-      forceRerender();
+      fetchData();
     } else {
       toast({ title: 'Error', description: result.message, variant: 'destructive' });
     }
@@ -138,7 +155,7 @@ export default function AdminDashboard() {
     const result = await rejectRequest(bookId);
      if (result.success) {
       toast({ title: 'Success', description: result.message });
-      forceRerender();
+      fetchData();
     } else {
       toast({ title: 'Error', description: result.message, variant: 'destructive' });
     }
@@ -162,7 +179,7 @@ export default function AdminDashboard() {
       
       <main>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-8 max-w-6xl mx-auto">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-4 lg:grid-cols-8 max-w-6xl mx-auto h-auto">
             <TabsTrigger value="requests">
               <BookUp className="mr-2 h-4 w-4" /> Requests <Badge variant="destructive" className="ml-2">{bookRequests.length}</Badge>
             </TabsTrigger>
@@ -189,6 +206,20 @@ export default function AdminDashboard() {
             </TabsTrigger>
           </TabsList>
           
+          {isLoading ? (
+            <Card className="mt-4">
+              <CardContent className="p-6 space-y-4">
+                  <Skeleton className="h-8 w-1/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                  <div className="border rounded-md p-4">
+                      <Skeleton className="h-6 w-full mb-4" />
+                      <Skeleton className="h-6 w-full mb-4" />
+                      <Skeleton className="h-6 w-full" />
+                  </div>
+              </CardContent>
+            </Card>
+          ) : (
+          <>
           <TabsContent value="requests">
             <Card>
               <CardHeader>
@@ -247,9 +278,9 @@ export default function AdminDashboard() {
                       <TableRow key={book.id}>
                         <TableCell className="font-medium">{book.title}</TableCell>
                         <TableCell>{book.userName}</TableCell>
-                        <TableCell>{new Date(book.dueDate!).toLocaleDateString()}</TableCell>
+                        <TableCell>{book.dueDate ? new Date(book.dueDate).toLocaleDateString() : 'N/A'}</TableCell>
                         <TableCell>
-                            <Badge variant="destructive">{differenceInDays(new Date(), parseISO(book.dueDate!))} days</Badge>
+                            <Badge variant="destructive">{book.dueDate ? differenceInDays(new Date(), parseISO(book.dueDate)) : 0} days</Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button size="sm" variant="default" onClick={() => handleSendReminder(book)}>
@@ -351,11 +382,11 @@ export default function AdminDashboard() {
           <TabsContent value="add_books">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <CreateBookForm onBookCreated={() => {
-                  forceRerender();
+                  fetchData();
                   setActiveTab('all_books');
                 }} />
                 <BulkUploadForm onUploadComplete={() => {
-                  forceRerender();
+                  fetchData();
                   setActiveTab('all_books');
                 }}/>
             </div>
@@ -363,7 +394,7 @@ export default function AdminDashboard() {
           <TabsContent value="manage_users">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-1">
-                <CreateUserForm onUserCreated={forceRerender} />
+                <CreateUserForm onUserCreated={fetchData} />
               </div>
               <div className="lg:col-span-2">
                 <Card>
@@ -496,6 +527,8 @@ export default function AdminDashboard() {
                 </CardContent>
             </Card>
           </TabsContent>
+          </>
+          )}
 
         </Tabs>
       </main>

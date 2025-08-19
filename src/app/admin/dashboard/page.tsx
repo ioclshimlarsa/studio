@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban, Trash2, FileDown, History, BookMarked } from 'lucide-react';
+import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban, Trash2, FileDown, History, BookMarked, Languages } from 'lucide-react';
 import { ReminderDialog } from '@/components/admin/reminder-dialog';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { Label } from '@/components/ui/label';
@@ -34,6 +34,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('requests');
   const { toast } = useToast();
   const [selectedHistoryUserId, setSelectedHistoryUserId] = useState<string | null>(null);
+  const [languageFilter, setLanguageFilter] = useState<string>('all');
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -59,6 +60,12 @@ export default function AdminDashboard() {
   const overdueBooks = allBooks.filter((book) => 
     book.status === 'Issued' && book.dueDate && differenceInDays(new Date(), parseISO(book.dueDate)) > 0
   );
+  
+  const uniqueLanguages = ['all', ...Array.from(new Set(allBooks.map(book => book.language)))];
+
+  const filteredBooksByLanguage = languageFilter === 'all' 
+    ? allBooks 
+    : allBooks.filter(book => book.language === languageFilter);
 
   const handleSendReminder = (book: Book) => {
     setSelectedBook(book);
@@ -183,7 +190,7 @@ export default function AdminDashboard() {
       
       <main>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-5 lg:grid-cols-9 max-w-6xl mx-auto h-auto">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-5 lg:grid-cols-10 max-w-6xl mx-auto h-auto">
             <TabsTrigger value="requests">
               <BookUp className="mr-2 h-4 w-4" /> Requests <Badge variant="destructive" className="ml-2">{bookRequests.length}</Badge>
             </TabsTrigger>
@@ -198,6 +205,9 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="all_books">
               <Library className="mr-2 h-4 w-4" /> All Books
+            </TabsTrigger>
+            <TabsTrigger value="filter_by_language">
+                <Languages className="mr-2 h-4 w-4" /> Filter by Language
             </TabsTrigger>
             <TabsTrigger value="add_books">
               <PlusCircle className="mr-2 h-4 w-4" /> Add Books
@@ -417,6 +427,62 @@ export default function AdminDashboard() {
                         </TableCell>
                       </TableRow>
                     ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="filter_by_language">
+            <Card>
+              <CardHeader>
+                <CardTitle>Filter by Language</CardTitle>
+                <CardDescription>Select a language to view all available books.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="max-w-xs">
+                  <Label htmlFor="language-select">Select Language</Label>
+                  <Select value={languageFilter} onValueChange={setLanguageFilter}>
+                    <SelectTrigger id="language-select">
+                      <SelectValue placeholder="Select a language..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {uniqueLanguages.map(lang => (
+                        <SelectItem key={lang} value={lang}>
+                          {lang === 'all' ? 'All Languages' : lang}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Author</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Issued To</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBooksByLanguage.length > 0 ? (
+                      filteredBooksByLanguage.map(book => (
+                        <TableRow key={book.id}>
+                          <TableCell className="font-medium">{book.title}</TableCell>
+                          <TableCell>{book.author}</TableCell>
+                          <TableCell>
+                            <Badge variant={book.status === 'Available' ? 'secondary' : book.status === 'Issued' ? 'default' : 'outline'} className="capitalize">
+                              {book.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{book.userName || 'N/A'}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center">No books found for this language.</TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>

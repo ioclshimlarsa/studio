@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Book as BookIcon, BookCheck, History, Library, User as UserIcon, Hand, PlusCircle, LogOut, AlertTriangle } from 'lucide-react';
+import { Book as BookIcon, BookCheck, History, Library, User as UserIcon, Hand, PlusCircle, LogOut, AlertTriangle, Languages } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFormStatus } from 'react-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 function getLoggedInUserId(): string | null {
@@ -33,6 +34,7 @@ export default function UserDashboard() {
     const [myHistory, setMyHistory] = useState<BorrowingHistoryEntry[]>([]);
     const [myBooks, setMyBooks] = useState<Book[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [languageFilter, setLanguageFilter] = useState<string>('all');
 
     const forceRerender = useCallback(async () => {
         setIsLoading(true);
@@ -97,6 +99,12 @@ export default function UserDashboard() {
     const overdueBooks = myBooks.filter(book => 
         book.dueDate && differenceInDays(new Date(), parseISO(book.dueDate)) > 0
     );
+
+    const uniqueLanguages = ['all', ...Array.from(new Set(allBooks.map(book => book.language)))];
+
+    const filteredBooksByLanguage = languageFilter === 'all' 
+        ? allBooks 
+        : allBooks.filter(book => book.language === languageFilter);
 
     if (isLoading) {
         return (
@@ -169,12 +177,15 @@ export default function UserDashboard() {
 
             <main>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 max-w-xl mx-auto h-auto">
+                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 max-w-2xl mx-auto h-auto">
                         <TabsTrigger value="my_books">
                             <BookCheck className="mr-2 h-4 w-4" /> My Books
                         </TabsTrigger>
                         <TabsTrigger value="browse">
                             <Library className="mr-2 h-4 w-4" /> Browse
+                        </TabsTrigger>
+                         <TabsTrigger value="filter_by_language">
+                            <Languages className="mr-2 h-4 w-4" /> Filter by Language
                         </TabsTrigger>
                         <TabsTrigger value="history">
                             <History className="mr-2 h-4 w-4" /> History
@@ -257,6 +268,68 @@ export default function UserDashboard() {
                                             </TableRow>
                                         ))}
                                     </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    
+                     <TabsContent value="filter_by_language">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Filter by Language</CardTitle>
+                                <CardDescription>Select a language to view books and request them.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="max-w-xs">
+                                <Label htmlFor="language-select-user">Select Language</Label>
+                                <Select value={languageFilter} onValueChange={setLanguageFilter}>
+                                    <SelectTrigger id="language-select-user">
+                                    <SelectValue placeholder="Select a language..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                    {uniqueLanguages.map(lang => (
+                                        <SelectItem key={lang} value={lang}>
+                                        {lang === 'all' ? 'All Languages' : lang}
+                                        </SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                </div>
+                                <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                    <TableHead>Title</TableHead>
+                                    <TableHead>Author</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredBooksByLanguage.length > 0 ? (
+                                    filteredBooksByLanguage.map(book => (
+                                        <TableRow key={book.id} className={book.status !== 'Available' ? 'text-muted-foreground' : ''}>
+                                        <TableCell className="font-medium">{book.title}</TableCell>
+                                        <TableCell>{book.author}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={book.status === 'Available' ? 'secondary' : book.status === 'Issued' ? 'default' : 'outline'} className="capitalize">
+                                                {book.status === 'Requested' && book.issuedTo === user.id ? 'Requested by you' : book.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {book.status === 'Available' ? (
+                                            <Button size="sm" onClick={() => handleRequestBook(book.id)}>Request</Button>
+                                            ) : (
+                                            <span className="text-sm italic">Unavailable</span>
+                                            )}
+                                        </TableCell>
+                                        </TableRow>
+                                    ))
+                                    ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center">No books found for this language.</TableCell>
+                                    </TableRow>
+                                    )}
+                                </TableBody>
                                 </Table>
                             </CardContent>
                         </Card>

@@ -42,14 +42,15 @@ const getInMemoryCache = (() => {
     return {
         get: <T>(key: keyof typeof cache): T => {
             if (!isInitialized) initializeCache();
-            // Return a deep copy to prevent accidental mutation of the cache from outside
-            return JSON.parse(JSON.stringify(cache[key]));
+            // Return a direct reference to the cached object for performance.
+            // The `set` method will handle deep copying to prevent mutation issues.
+            return cache[key] as T;
         },
         set: async (key: keyof typeof cache, value: any) => {
             if (!isInitialized) initializeCache();
             
-            // Update the in-memory cache
-            cache[key] = value;
+            // Update the in-memory cache with a deep copy to ensure the cache holds a clean version.
+            cache[key] = JSON.parse(JSON.stringify(value));
 
             // Also write it back to the file system for persistence across server restarts.
             const dataDir = path.join(process.cwd(), 'src', 'lib', 'data');

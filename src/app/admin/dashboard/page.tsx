@@ -167,6 +167,11 @@ export default function AdminDashboard() {
       toast({ title: 'Error', description: result.message, variant: 'destructive' });
     }
   };
+
+  const onPasswordReset = useCallback(() => {
+    setResetPasswordOpen(false);
+    fetchData();
+  }, [fetchData]);
   
   const selectedUserHistory = selectedHistoryUserId ? getHistoryForUser(selectedHistoryUserId)?.history : [];
 
@@ -653,10 +658,7 @@ export default function AdminDashboard() {
             isOpen={isResetPasswordOpen}
             onOpenChange={setResetPasswordOpen}
             user={selectedUser}
-            onPasswordReset={() => {
-                setResetPasswordOpen(false);
-                fetchData();
-            }}
+            onPasswordReset={onPasswordReset}
         />
       )}
     </div>

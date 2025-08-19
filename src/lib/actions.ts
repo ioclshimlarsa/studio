@@ -188,7 +188,8 @@ export async function addBook(prevState: any, formData: FormData) {
         status: 'Available',
     };
 
-    await saveBooks([...currentBooks, newBook]);
+    const updatedBooks = [...currentBooks, newBook];
+    await saveBooks(updatedBooks);
 
     return { success: true, message: `Book "${title}" added successfully.` };
 }
@@ -224,7 +225,8 @@ export async function addBooksFromCSV(prevState: any, formData: FormData) {
             };
         });
 
-        await saveBooks([...currentBooks, ...newBooks]);
+        const updatedBooks = [...currentBooks, ...newBooks];
+        await saveBooks(updatedBooks);
 
         return { success: true, message: `${newBooks.length} books added successfully from CSV.` };
 
@@ -417,3 +419,5 @@ export async function getUserDashboardData(userId: string) {
         myBooks: allBooks.filter(book => book.issuedTo === userId),
     };
 }
+
+    

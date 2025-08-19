@@ -27,6 +27,12 @@
         "title": "Pride and Prejudice",
         "issueDate": "2025-08-19T09:14:33Z",
         "dueDate": "2025-09-02T09:14:33Z"
+      },
+      {
+        "bookId": "B005",
+        "title": "The Catcher in the Rye",
+        "issueDate": "2025-08-19T09:23:59Z",
+        "dueDate": "2025-09-02T09:23:59Z"
       }
     ]
   },

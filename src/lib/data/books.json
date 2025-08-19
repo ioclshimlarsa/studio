@@ -48,9 +48,11 @@
     "title": "The Catcher in the Rye",
     "author": "J.D. Salinger",
     "language": "English",
-    "status": "Requested",
+    "status": "Issued",
     "issuedTo": "user01",
-    "userName": "Alice"
+    "userName": "Alice",
+    "issueDate": "2025-08-19T09:23:59Z",
+    "dueDate": "2025-09-02T09:23:59Z"
   },
   {
     "id": "B006",

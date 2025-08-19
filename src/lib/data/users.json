@@ -5,7 +5,7 @@
     "name": "Admin",
     "email": "admin@library.com",
     "role": "admin",
-    "password": "password",
+    "password": "password123",
     "status": "active"
   },
   {

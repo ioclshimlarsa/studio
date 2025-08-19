@@ -20,7 +20,11 @@ function SubmitButton() {
   );
 }
 
-export function CreateUserForm() {
+interface CreateUserFormProps {
+    onUserCreated: () => void;
+}
+
+export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
   const [state, formAction] = useActionState(createUser, undefined);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
@@ -32,6 +36,7 @@ export function CreateUserForm() {
         description: state.message,
       });
       formRef.current?.reset();
+      onUserCreated(); // Callback to refresh the user list
     } else if (state?.error) {
       toast({
         title: 'Error',
@@ -39,7 +44,7 @@ export function CreateUserForm() {
         variant: 'destructive',
       });
     }
-  }, [state, toast]);
+  }, [state, toast, onUserCreated]);
 
   return (
     <Card>

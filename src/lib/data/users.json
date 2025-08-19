@@ -1,0 +1,43 @@
+
+[
+  {
+    "id": "admin01",
+    "name": "Admin",
+    "email": "admin@library.com",
+    "role": "admin",
+    "password": "password",
+    "status": "active"
+  },
+  {
+    "id": "user01",
+    "name": "Alice",
+    "email": "alice@example.com",
+    "role": "user",
+    "password": "password",
+    "status": "active"
+  },
+  {
+    "id": "user02",
+    "name": "Bob",
+    "email": "bob@example.com",
+    "role": "user",
+    "password": "password",
+    "status": "active"
+  },
+  {
+    "id": "user03",
+    "name": "Charlie",
+    "email": "charlie@example.com",
+    "role": "user",
+    "password": "password",
+    "status": "inactive"
+  },
+  {
+    "id": "user04",
+    "name": "Diana",
+    "email": "diana@example.com",
+    "role": "user",
+    "password": "password",
+    "status": "blocked"
+  }
+]

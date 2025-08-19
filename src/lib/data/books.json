@@ -1,0 +1,77 @@
+
+[
+  {
+    "id": "B001",
+    "title": "The Great Gatsby",
+    "author": "F. Scott Fitzgerald",
+    "language": "English",
+    "status": "Issued",
+    "issuedTo": "user01",
+    "userName": "Alice",
+    "issueDate": "2024-07-28T16:00:00.000Z",
+    "dueDate": "2024-08-11T16:00:00.000Z"
+  },
+  {
+    "id": "B002",
+    "title": "To Kill a Mockingbird",
+    "author": "Harper Lee",
+    "language": "English",
+    "status": "Issued",
+    "issuedTo": "user02",
+    "userName": "Bob",
+    "issueDate": "2024-08-07T16:00:00.000Z",
+    "dueDate": "2024-08-21T16:00:00.000Z"
+  },
+  {
+    "id": "B003",
+    "title": "1984",
+    "author": "George Orwell",
+    "language": "English",
+    "status": "Available"
+  },
+  {
+    "id": "B004",
+    "title": "Pride and Prejudice",
+    "author": "Jane Austen",
+    "language": "English",
+    "status": "Available"
+  },
+  {
+    "id": "B005",
+    "title": "The Catcher in the Rye",
+    "author": "J.D. Salinger",
+    "language": "English",
+    "status": "Requested",
+    "issuedTo": "user01",
+    "userName": "Alice"
+  },
+  {
+    "id": "B006",
+    "title": "Moby Dick",
+    "author": "Herman Melville",
+    "language": "English",
+    "status": "Available"
+  },
+  {
+    "id": "B007",
+    "title": "War and Peace",
+    "author": "Leo Tolstoy",
+    "language": "English",
+    "status": "Issued",
+    "issuedTo": "user01",
+    "userName": "Alice",
+    "issueDate": "2024-08-12T16:00:00.000Z",
+    "dueDate": "2024-08-26T16:00:00.000Z"
+  },
+  {
+    "id": "B008",
+    "title": "Don Quixote",
+    "author": "Miguel de Cervantes",
+    "language": "Spanish",
+    "status": "Issued",
+    "issuedTo": "user02",
+    "userName": "Bob",
+    "issueDate": "2024-07-16T16:00:00.000Z",
+    "dueDate": "2024-08-15T16:00:00.000Z"
+  }
+]

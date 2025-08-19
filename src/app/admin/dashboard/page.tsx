@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { books, histories, bookDemands, users } from '@/lib/data';
+import { books as getBooks, histories as getHistories, bookDemands as getBookDemands, users as getUsers } from '@/lib/data';
 import type { Book, UserBorrowingHistory, User, BorrowingHistoryEntry } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,25 +20,28 @@ import { updateUserStatus, resetUserPassword, removeBook } from '@/lib/actions';
 import { downloadCSV } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-
-const bookRequests = books.filter((book) => book.status === 'Requested');
-const overdueBooks = books.filter((book) => 
-  book.status === 'Issued' && book.dueDate && differenceInDays(new Date(), parseISO(book.dueDate)) > 0
-);
-
-
 export default function AdminDashboard() {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [isReminderOpen, setReminderOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('requests');
   const { toast } = useToast();
-  // Force a re-render when user/book data changes
-  const [userVersion, setUserVersion] = useState(0); 
-  const [bookVersion, setBookVersion] = useState(0); 
+  const [dataVersion, setDataVersion] = useState(0); 
   const [selectedHistoryUserId, setSelectedHistoryUserId] = useState<string | null>(null);
 
-  const allUsers = users;
-  const allBooks = books;
+  // Re-fetch data whenever dataVersion changes
+  const allUsers = getUsers();
+  const allBooks = getBooks();
+  const allHistories = getHistories();
+  const allBookDemands = getBookDemands();
+
+  const bookRequests = allBooks.filter((book) => book.status === 'Requested');
+  const overdueBooks = allBooks.filter((book) => 
+    book.status === 'Issued' && book.dueDate && differenceInDays(new Date(), parseISO(book.dueDate)) > 0
+  );
+
+  const forceRerender = () => {
+    setDataVersion(v => v + 1);
+  };
 
   const handleSendReminder = (book: Book) => {
     setSelectedBook(book);
@@ -46,7 +49,7 @@ export default function AdminDashboard() {
   };
 
   const getHistoryForUser = (userId: string | undefined): UserBorrowingHistory | undefined => {
-    return histories.find(h => h.userId === userId);
+    return allHistories.find(h => h.userId === userId);
   }
 
   const handleLogout = () => {
@@ -57,7 +60,7 @@ export default function AdminDashboard() {
     const result = await updateUserStatus(userId, status);
     if (result.success) {
       toast({ title: 'Success', description: result.message });
-      setUserVersion(v => v + 1); // Trigger re-render
+      forceRerender();
     } else {
       toast({ title: 'Error', description: result.message, variant: 'destructive' });
     }
@@ -68,6 +71,7 @@ export default function AdminDashboard() {
         const result = await resetUserPassword(userId);
         if (result.success) {
             toast({ title: 'Password Reset', description: result.message });
+            forceRerender();
         } else {
             toast({ title: 'Error', description: result.message, variant: 'destructive' });
         }
@@ -79,7 +83,7 @@ export default function AdminDashboard() {
       const result = await removeBook(bookId);
       if (result.success) {
         toast({ title: 'Book Removed', description: result.message });
-        setBookVersion(v => v + 1); // Trigger re-render
+        forceRerender();
       } else {
         toast({ title: 'Error', description: result.message, variant: 'destructive' });
       }
@@ -96,11 +100,11 @@ export default function AdminDashboard() {
         filename = 'all_books_report.csv';
         break;
       case 'transactions':
-        data = histories.flatMap(h => h.history.map(entry => ({ userId: h.userId, ...entry })));
+        data = allHistories.flatMap(h => h.history.map(entry => ({ userId: h.userId, ...entry })));
         filename = 'all_transactions_report.csv';
         break;
       case 'demands':
-        data = bookDemands;
+        data = allBookDemands;
         filename = 'book_demands_report.csv';
         break;
       case 'users':
@@ -143,7 +147,7 @@ export default function AdminDashboard() {
               <Bell className="mr-2 h-4 w-4" /> Overdue <Badge variant="destructive" className="ml-2">{overdueBooks.length}</Badge>
             </TabsTrigger>
             <TabsTrigger value="demands">
-                <Hand className="mr-2 h-4 w-4" /> Demands <Badge variant="destructive" className="ml-2">{bookDemands.length}</Badge>
+                <Hand className="mr-2 h-4 w-4" /> Demands <Badge variant="destructive" className="ml-2">{allBookDemands.length}</Badge>
             </TabsTrigger>
             <TabsTrigger value="all_books">
               <Library className="mr-2 h-4 w-4" /> All Books
@@ -257,7 +261,7 @@ export default function AdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {bookDemands.length > 0 ? bookDemands.map((demand) => (
+                    {allBookDemands.length > 0 ? allBookDemands.map((demand) => (
                       <TableRow key={demand.id}>
                         <TableCell className="font-medium">{demand.title}</TableCell>
                         <TableCell>{demand.author}</TableCell>
@@ -369,7 +373,7 @@ export default function AdminDashboard() {
           <TabsContent value="manage_users">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-1">
-                <CreateUserForm />
+                <CreateUserForm onUserCreated={forceRerender} />
               </div>
               <div className="lg:col-span-2">
                 <Card>
@@ -517,5 +521,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
-    

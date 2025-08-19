@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { books, histories } from '@/lib/data';
+import { books as getBooks, histories as getHistories } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,8 +17,9 @@ import { Input } from '@/components/ui/input';
 const MOCK_USER_ID = 'user01'; 
 const user = { name: 'Alice' }; // Mock user
 
-const myBooks = books.filter((book) => book.issuedTo === MOCK_USER_ID);
-const myHistory = histories.find((h) => h.userId === MOCK_USER_ID)?.history || [];
+const myBooks = getBooks().filter((book) => book.issuedTo === MOCK_USER_ID);
+const myHistory = getHistories().find((h) => h.userId === MOCK_USER_ID)?.history || [];
+const allBooks = getBooks();
 
 export default function UserDashboard() {
     const [activeTab, setActiveTab] = useState('my_books');
@@ -115,7 +116,7 @@ export default function UserDashboard() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {books.map((book) => (
+                                        {allBooks.map((book) => (
                                             <TableRow key={book.id} className={book.status !== 'Available' ? 'text-muted-foreground' : ''}>
                                                 <TableCell className="font-medium">{book.title}</TableCell>
                                                 <TableCell>{book.author}</TableCell>
@@ -194,5 +195,3 @@ export default function UserDashboard() {
         </div>
     );
 }
-
-    

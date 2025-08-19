@@ -4,7 +4,7 @@
 import { generatePersonalizedReminder } from '@/ai/flows/generate-personalized-reminder';
 import { generateWelcomeEmail } from '@/ai/flows/generate-welcome-email';
 import { z } from 'zod';
-import { users, books, histories } from './data';
+import { users, books, histories, saveUsers, saveBooks } from './data';
 import type { GeneratePersonalizedReminderInput } from '@/ai/flows/generate-personalized-reminder';
 import type { User } from './types';
 
@@ -24,7 +24,8 @@ export async function login(prevState: any, formData: FormData) {
   }
   
   const { userId, password, role } = validatedFields.data;
-  const user = users.find((u) => u.id === userId && u.role === role && u.password === password && u.status === 'active');
+  const currentUsers = users();
+  const user = currentUsers.find((u) => u.id === userId && u.role === role && u.password === password && u.status === 'active');
 
   if (!user) {
     return {
@@ -67,12 +68,13 @@ export async function createUser(prevState: any, formData: FormData) {
     }
 
     const { name, email, userId, password } = validatedFields.data;
+    const currentUsers = users();
 
-    if (users.some(u => u.id === userId)) {
+    if (currentUsers.some(u => u.id === userId)) {
         return { error: 'User ID already exists.' };
     }
     
-    if (users.some(u => u.email === email)) {
+    if (currentUsers.some(u => u.email === email)) {
         return { error: 'Email already in use.' };
     }
 
@@ -84,51 +86,53 @@ export async function createUser(prevState: any, formData: FormData) {
         role: 'user',
         status: 'active',
     };
-
-    // In a real app, you'd save this to a database
-    users.push(newUser);
+    
+    currentUsers.push(newUser);
+    saveUsers(currentUsers);
     
     try {
         await generateWelcomeEmail({ name, email, userId });
-        // You could add a real email sending service here
         console.log(`Welcome email generated for ${email}`);
         return { success: true, message: `User ${name} created and a welcome email has been sent.` };
 
     } catch (error) {
         console.error('Failed to generate welcome email:', error);
-        // Still treat user creation as a success, but notify about the email failure.
         return { success: true, message: `User ${name} created, but failed to send welcome email.` };
     }
 }
 
 export async function updateUserStatus(userId: string, status: 'active' | 'inactive' | 'blocked') {
-    const user = users.find(u => u.id === userId);
+    const currentUsers = users();
+    const user = currentUsers.find(u => u.id === userId);
     if (user) {
         user.status = status;
+        saveUsers(currentUsers);
         return { success: true, message: `User status updated to ${status}.` };
     }
     return { success: false, message: 'User not found.' };
 }
 
 export async function resetUserPassword(userId: string) {
-    const user = users.find(u => u.id === userId);
+    const currentUsers = users();
+    const user = currentUsers.find(u => u.id === userId);
     if (user) {
-        // In a real app, generate a random password and email it.
         user.password = 'password';
+        saveUsers(currentUsers);
         return { success: true, message: `Password for ${user.name} has been reset to "password".` };
     }
     return { success: false, message: 'User not found.' };
 }
 
 export async function removeBook(bookId: string) {
-    const bookIndex = books.findIndex(b => b.id === bookId);
+    const currentBooks = books();
+    const bookIndex = currentBooks.findIndex(b => b.id === bookId);
     if (bookIndex > -1) {
-        const book = books[bookIndex];
-        // Optional: you might want to prevent deletion if a book is currently issued.
+        const book = currentBooks[bookIndex];
         if (book.status === 'Issued') {
             return { success: false, message: `Cannot remove "${book.title}" because it is currently issued to a user.`};
         }
-        books.splice(bookIndex, 1);
+        currentBooks.splice(bookIndex, 1);
+        saveBooks(currentBooks);
         return { success: true, message: `Book "${book.title}" has been removed.` };
     }
     return { success: false, message: 'Book not found.' };

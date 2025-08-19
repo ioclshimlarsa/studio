@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useEffect } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useEffect, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,7 @@ function SubmitButton() {
 
 export function ResetPasswordDialog({ isOpen, onOpenChange, user, onPasswordReset }: ResetPasswordDialogProps) {
   const { toast } = useToast();
-  const [state, formAction] = useFormState(resetUserPassword, undefined);
+  const [state, formAction] = useActionState(resetUserPassword, undefined);
 
   useEffect(() => {
     if (state?.success) {

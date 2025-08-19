@@ -27,10 +27,13 @@ export function LoginForm() {
 
   useEffect(() => {
     if (state?.success) {
-        if (state.role === 'admin') {
-            window.location.href = '/admin/dashboard';
-        } else {
-            window.location.href = '/user/dashboard';
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('loggedInUserId', state.userId);
+            if (state.role === 'admin') {
+                window.location.href = '/admin/dashboard';
+            } else {
+                window.location.href = '/user/dashboard';
+            }
         }
     }
   }, [state]);
@@ -74,5 +77,3 @@ export function LoginForm() {
     </Card>
   );
 }
-
-    

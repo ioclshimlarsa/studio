@@ -18,7 +18,7 @@ import { CreateUserForm } from '@/components/admin/create-user-form';
 import { CreateBookForm } from '@/components/admin/create-book-form';
 import { BulkUploadForm } from '@/components/admin/bulk-upload-form';
 import { useToast } from '@/hooks/use-toast';
-import { updateUserStatus, resetUserPassword, removeBook } from '@/lib/actions';
+import { updateUserStatus, resetUserPassword, removeBook, approveRequest, rejectRequest } from '@/lib/actions';
 import { downloadCSV } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -51,6 +51,7 @@ export default function AdminDashboard() {
   };
 
   const getHistoryForUser = (userId: string | undefined): UserBorrowingHistory | undefined => {
+    if (!userId) return undefined;
     return allHistories.find(h => h.userId === userId);
   }
 
@@ -92,7 +93,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDownloadReport = async (reportType: 'books' | 'transactions' | 'demands' | 'users') => {
+  const handleDownloadReport = (reportType: 'books' | 'transactions' | 'demands' | 'users') => {
     let data: any[] = [];
     let filename = '';
     
@@ -116,10 +117,30 @@ export default function AdminDashboard() {
     }
 
     if (data.length > 0) {
-      downloadCSV(data, filename); // This now works on the client-side
+      downloadCSV(data, filename);
       toast({ title: 'Report Generated', description: `${filename} has been downloaded.` });
     } else {
       toast({ title: 'No Data', description: 'There is no data to generate a report.', variant: 'destructive' });
+    }
+  };
+  
+  const handleApprove = async (bookId: string) => {
+    const result = await approveRequest(bookId);
+     if (result.success) {
+      toast({ title: 'Success', description: result.message });
+      forceRerender();
+    } else {
+      toast({ title: 'Error', description: result.message, variant: 'destructive' });
+    }
+  };
+
+  const handleReject = async (bookId: string) => {
+    const result = await rejectRequest(bookId);
+     if (result.success) {
+      toast({ title: 'Success', description: result.message });
+      forceRerender();
+    } else {
+      toast({ title: 'Error', description: result.message, variant: 'destructive' });
     }
   };
   
@@ -191,8 +212,8 @@ export default function AdminDashboard() {
                         <TableCell>{book.author}</TableCell>
                         <TableCell>{book.userName}</TableCell>
                         <TableCell className="text-right space-x-2">
-                          <Button size="sm" variant="outline"><Check className="text-green-500" /></Button>
-                          <Button size="sm" variant="outline"><X className="text-red-500" /></Button>
+                          <Button size="sm" variant="outline" onClick={() => handleApprove(book.id)}><Check className="text-green-500" /></Button>
+                          <Button size="sm" variant="outline" onClick={() => handleReject(book.id)}><X className="text-red-500" /></Button>
                         </TableCell>
                       </TableRow>
                     )) : (

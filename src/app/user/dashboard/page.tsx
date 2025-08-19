@@ -1,32 +1,98 @@
 
 'use client';
 
-import { useState } from 'react';
-import { books as getBooks, histories as getHistories } from '@/lib/data';
+import { useState, useEffect } from 'react';
+import { books as getBooks, histories as getHistories, users as getUsers } from '@/lib/data';
+import type { Book, UserBorrowingHistory, User } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Book, BookCheck, History, Library, User, Hand, PlusCircle, LogOut } from 'lucide-react';
+import { Book as BookIcon, BookCheck, History, Library, User as UserIcon, Hand, PlusCircle, LogOut } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { returnBook, requestBook, demandBook } from '@/lib/actions';
+import { useFormStatus } from 'react-dom';
 
-// This is a mock. In a real app, you'd get this from session/auth.
-const MOCK_USER_ID = 'user01'; 
-const user = { name: 'Alice' }; // Mock user
 
-const myBooks = getBooks().filter((book) => book.issuedTo === MOCK_USER_ID);
-const myHistory = getHistories().find((h) => h.userId === MOCK_USER_ID)?.history || [];
-const allBooks = getBooks();
+function getLoggedInUser(): User | undefined {
+    if (typeof window === 'undefined') return undefined;
+    const userId = localStorage.getItem('loggedInUserId');
+    if (!userId) return undefined;
+    return getUsers().find(u => u.id === userId);
+}
+
 
 export default function UserDashboard() {
     const [activeTab, setActiveTab] = useState('my_books');
+    const { toast } = useToast();
+    const [dataVersion, setDataVersion] = useState(0); 
+    const [user, setUser] = useState<User | undefined>(undefined);
+
+    const forceRerender = () => {
+        setDataVersion(v => v + 1);
+    };
+
+    useEffect(() => {
+        const loggedInUser = getLoggedInUser();
+        if (!loggedInUser) {
+            window.location.href = '/';
+        } else {
+            setUser(loggedInUser);
+        }
+    }, [dataVersion]);
+    
+    // Re-fetch data whenever dataVersion changes
+    const allBooks = getBooks();
+    const myHistory = user ? getHistories().find((h) => h.userId === user.id)?.history || [] : [];
+    const myBooks = user ? allBooks.filter((book) => book.issuedTo === user.id) : [];
 
     const handleLogout = () => {
+        localStorage.removeItem('loggedInUserId');
         window.location.href = '/';
     };
+    
+    const handleReturnBook = async (bookId: string) => {
+        if (!user) return;
+        const result = await returnBook(bookId, user.id);
+        if (result.success) {
+            toast({ title: 'Success', description: result.message });
+            forceRerender();
+        } else {
+            toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        }
+    };
+    
+    const handleRequestBook = async (bookId: string) => {
+        if (!user) return;
+        const result = await requestBook(bookId, user.id, user.name);
+        if (result.success) {
+            toast({ title: 'Success', description: result.message });
+            forceRerender();
+        } else {
+            toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        }
+    };
+
+    if (!user) {
+        return (
+            <div className="flex min-h-screen items-center justify-center">
+                <p>Loading user data...</p>
+            </div>
+        );
+    }
+    
+    function DemandSubmitButton() {
+        const { pending } = useFormStatus();
+        return (
+            <Button type="submit" className="w-full" disabled={pending}>
+                {pending ? 'Submitting...' : <> <PlusCircle className="mr-2 h-4 w-4" /> Submit Demand </>}
+            </Button>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-muted/40 p-4 md:p-8">
@@ -87,7 +153,7 @@ export default function UserDashboard() {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button size="sm">Return Book</Button>
+                                                    <Button size="sm" onClick={() => handleReturnBook(book.id)}>Return Book</Button>
                                                 </TableCell>
                                             </TableRow>
                                         )}) : (
@@ -123,9 +189,9 @@ export default function UserDashboard() {
                                                 <TableCell>{book.language}</TableCell>
                                                 <TableCell className="text-right">
                                                     {book.status === 'Available' ? (
-                                                        <Button size="sm">Request</Button>
+                                                        <Button size="sm" onClick={() => handleRequestBook(book.id)}>Request</Button>
                                                     ) : (
-                                                        <span className="text-sm italic">Someone is reading it</span>
+                                                        <span className="text-sm italic">{book.status === 'Requested' && book.issuedTo === user.id ? 'Requested by you' : 'Unavailable'}</span>
                                                     )}
                                                 </TableCell>
                                             </TableRow>
@@ -174,18 +240,25 @@ export default function UserDashboard() {
                                 <CardDescription>Can't find a book you're looking for? Request it here!</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <form className="space-y-4">
+                                <form action={async (formData) => {
+                                    if (!user) return;
+                                    const result = await demandBook(user.name, formData);
+                                     if (result.success) {
+                                        toast({ title: 'Success', description: result.message });
+                                        // Reset form manually if needed
+                                    } else {
+                                        toast({ title: 'Error', description: result.error, variant: 'destructive' });
+                                    }
+                                }} className="space-y-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="demand-title">Book Title</Label>
-                                        <Input id="demand-title" placeholder="e.g., The Lord of the Rings" />
+                                        <Input name="title" id="demand-title" placeholder="e.g., The Lord of the Rings" required />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="demand-author">Author</Label>
-                                        <Input id="demand-author" placeholder="e.g., J.R.R. Tolkien" />
+                                        <Input name="author" id="demand-author" placeholder="e.g., J.R.R. Tolkien" required />
                                     </div>
-                                    <Button type="submit" className="w-full">
-                                        <PlusCircle className="mr-2 h-4 w-4" /> Submit Demand
-                                    </Button>
+                                    <DemandSubmitButton />
                                 </form>
                             </CardContent>
                         </Card>
@@ -195,3 +268,4 @@ export default function UserDashboard() {
         </div>
     );
 }
+

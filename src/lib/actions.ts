@@ -234,7 +234,7 @@ export async function approveRequest(bookId: string) {
 
     // Update book status
     const issueDate = new Date();
-    const dueDate = add(issueDate, { days: 14 });
+    const dueDate = add(issueDate, { days: 30 });
     book.status = 'Issued';
     book.issueDate = formatISO(issueDate);
     book.dueDate = formatISO(dueDate);

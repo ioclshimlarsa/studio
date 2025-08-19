@@ -9,13 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Book as BookIcon, BookCheck, History, Library, User as UserIcon, Hand, PlusCircle, LogOut } from 'lucide-react';
+import { Book as BookIcon, BookCheck, History, Library, User as UserIcon, Hand, PlusCircle, LogOut, AlertTriangle } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFormStatus } from 'react-dom';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
 
 function getLoggedInUserId(): string | null {
     if (typeof window === 'undefined') return null;
@@ -91,6 +93,10 @@ export default function UserDashboard() {
             toast({ title: 'Error', description: result.message, variant: 'destructive' });
         }
     };
+    
+    const overdueBooks = myBooks.filter(book => 
+        book.dueDate && differenceInDays(new Date(), parseISO(book.dueDate)) > 0
+    );
 
     if (isLoading) {
         return (
@@ -150,6 +156,16 @@ export default function UserDashboard() {
                     Logout
                 </Button>
             </header>
+
+            {overdueBooks.length > 0 && (
+                <Alert variant="destructive" className="mb-8">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Overdue Books Alert!</AlertTitle>
+                    <AlertDescription>
+                        You have {overdueBooks.length} book(s) overdue. Please return them as soon as possible to avoid fines.
+                    </AlertDescription>
+                </Alert>
+            )}
 
             <main>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

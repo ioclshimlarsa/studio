@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban, Trash2, FileDown, History } from 'lucide-react';
+import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban, Trash2, FileDown, History, BookMarked } from 'lucide-react';
 import { ReminderDialog } from '@/components/admin/reminder-dialog';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { Label } from '@/components/ui/label';
@@ -55,6 +55,7 @@ export default function AdminDashboard() {
   }, [fetchData]);
   
   const bookRequests = allBooks.filter((book) => book.status === 'Requested');
+  const issuedBooks = allBooks.filter((book) => book.status === 'Issued');
   const overdueBooks = allBooks.filter((book) => 
     book.status === 'Issued' && book.dueDate && differenceInDays(new Date(), parseISO(book.dueDate)) > 0
   );
@@ -182,12 +183,15 @@ export default function AdminDashboard() {
       
       <main>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-4 lg:grid-cols-8 max-w-6xl mx-auto h-auto">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-5 lg:grid-cols-9 max-w-6xl mx-auto h-auto">
             <TabsTrigger value="requests">
               <BookUp className="mr-2 h-4 w-4" /> Requests <Badge variant="destructive" className="ml-2">{bookRequests.length}</Badge>
             </TabsTrigger>
+             <TabsTrigger value="issued_books">
+              <BookMarked className="mr-2 h-4 w-4" /> Issued Books
+            </TabsTrigger>
             <TabsTrigger value="overdue">
-              <Bell className="mr-2 h-4 w-4" /> Overdue <Badge variant="destructive" className="ml-2">{overdueBooks.length}</Badge>
+              <Bell className="mr-2 h-4 w-4" /> Overdue Books <Badge variant="destructive" className="ml-2">{overdueBooks.length}</Badge>
             </TabsTrigger>
             <TabsTrigger value="demands">
                 <Hand className="mr-2 h-4 w-4" /> Demands <Badge variant="destructive" className="ml-2">{allBookDemands.length}</Badge>
@@ -259,11 +263,48 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="issued_books">
+            <Card>
+              <CardHeader>
+                <CardTitle>Issued Books</CardTitle>
+                <CardDescription>All books currently checked out by users.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Book Title</TableHead>
+                      <TableHead>Issued To</TableHead>
+                      <TableHead>Issue Date</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Days Issued</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {issuedBooks.length > 0 ? issuedBooks.map((book) => (
+                      <TableRow key={book.id}>
+                        <TableCell className="font-medium">{book.title}</TableCell>
+                        <TableCell>{book.userName}</TableCell>
+                        <TableCell>{book.issueDate ? format(parseISO(book.issueDate), 'PPP') : 'N/A'}</TableCell>
+                        <TableCell>{book.dueDate ? format(parseISO(book.dueDate), 'PPP') : 'N/A'}</TableCell>
+                        <TableCell>
+                            {book.issueDate ? differenceInDays(new Date(), parseISO(book.issueDate)) : 0} days
+                        </TableCell>
+                      </TableRow>
+                    )) : (
+                        <TableRow><TableCell colSpan={5} className="text-center">No books are currently issued.</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="overdue">
             <Card>
               <CardHeader>
                 <CardTitle>Overdue Books</CardTitle>
-                <CardDescription>Send reminders to users for timely returns.</CardDescription>
+                <CardDescription>Send reminders to users for timely returns. Due date is 30 days from issue.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -281,7 +322,7 @@ export default function AdminDashboard() {
                       <TableRow key={book.id}>
                         <TableCell className="font-medium">{book.title}</TableCell>
                         <TableCell>{book.userName}</TableCell>
-                        <TableCell>{book.dueDate ? new Date(book.dueDate).toLocaleDateString() : 'N/A'}</TableCell>
+                        <TableCell>{book.dueDate ? format(parseISO(book.dueDate), 'PPP') : 'N/A'}</TableCell>
                         <TableCell>
                             <Badge variant="destructive">{book.dueDate ? differenceInDays(new Date(), parseISO(book.dueDate)) : 0} days</Badge>
                         </TableCell>

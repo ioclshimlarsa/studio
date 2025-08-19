@@ -117,17 +117,34 @@ export async function updateUserStatus(userId: string, status: 'active' | 'inact
     return { success: false, message: 'User not found.' };
 }
 
-export async function resetUserPassword(userId: string) {
+const resetPasswordSchema = z.object({
+    userId: z.string().min(1),
+    newPassword: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+});
+
+export async function resetUserPassword(prevState: any, formData: FormData) {
+    const validatedFields = resetPasswordSchema.safeParse(Object.fromEntries(formData.entries()));
+
+    if (!validatedFields.success) {
+        return {
+            error: validatedFields.error.flatten().fieldErrors.newPassword?.[0] || 'Invalid input.',
+        };
+    }
+    
+    const { userId, newPassword } = validatedFields.data;
     const currentUsers = await getUsers();
     const userIndex = currentUsers.findIndex(u => u.id === userId);
-    if (userIndex > -1) {
-        const newPassword = 'password';
-        currentUsers[userIndex].password = newPassword;
-        await saveUsers(currentUsers);
-        return { success: true, message: `Password for ${currentUsers[userIndex].name} has been reset to "${newPassword}".` };
+
+    if (userIndex === -1) {
+        return { error: 'User not found.' };
     }
-    return { success: false, message: 'User not found.' };
+
+    currentUsers[userIndex].password = newPassword;
+    await saveUsers(currentUsers);
+
+    return { success: true, message: `Password for ${currentUsers[userIndex].name} has been reset.` };
 }
+
 
 export async function removeBook(bookId: string) {
     let currentBooks = await getBooks();
@@ -365,11 +382,15 @@ export async function demandBook(userName: string, formData: FormData) {
 
 // Action to get all data for the admin dashboard
 export async function getAdminDashboardData() {
+    const users = await getUsers();
+    const books = await getBooks();
+    const histories = await getHistories();
+    const bookDemands = await getBookDemands();
     return {
-        users: await getUsers(),
-        books: await getBooks(),
-        histories: await getHistories(),
-        bookDemands: await getBookDemands(),
+        users,
+        books,
+        histories,
+        bookDemands
     };
 }
 
@@ -378,14 +399,19 @@ export async function getUserDashboardData(userId: string) {
     const allBooks = await getBooks();
     const allUsers = await getUsers();
     const allHistories = await getHistories();
+    const user = allUsers.find(u => u.id === userId);
     const userHistory = allHistories.find(h => h.userId === userId);
+    
+    if (!user) {
+      console.warn(`No user found for user: ${userId}`);
+    }
     
     if (!userHistory) {
       console.warn(`No history found for user: ${userId}`);
     }
 
     return {
-        user: allUsers.find(u => u.id === userId),
+        user,
         allBooks,
         myHistory: userHistory?.history ?? [],
         myBooks: allBooks.filter(book => book.issuedTo === userId),

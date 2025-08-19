@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getAdminDashboardData, updateUserStatus, resetUserPassword, removeBook, approveRequest, rejectRequest } from '@/lib/actions';
+import { getAdminDashboardData, updateUserStatus, removeBook, approveRequest, rejectRequest } from '@/lib/actions';
 import type { Book, UserBorrowingHistory, User, BorrowingHistoryEntry, BookDemand } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban, Trash2, FileDown, History, BookMarked, Languages } from 'lucide-react';
 import { ReminderDialog } from '@/components/admin/reminder-dialog';
+import { ResetPasswordDialog } from '@/components/admin/reset-password-dialog';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -30,7 +31,9 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isReminderOpen, setReminderOpen] = useState(false);
+  const [isResetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('requests');
   const { toast } = useToast();
   const [selectedHistoryUserId, setSelectedHistoryUserId] = useState<string | null>(null);
@@ -93,17 +96,10 @@ export default function AdminDashboard() {
       toast({ title: 'Error', description: result.message, variant: 'destructive' });
     }
   };
-
-  const handlePasswordReset = async (userId: string) => {
-    if(confirm('Are you sure you want to reset the password for this user?')) {
-        const result = await resetUserPassword(userId);
-        if (result.success) {
-            toast({ title: 'Password Reset', description: result.message });
-            fetchData();
-        } else {
-            toast({ title: 'Error', description: result.message, variant: 'destructive' });
-        }
-    }
+  
+  const handleOpenResetPassword = (user: User) => {
+    setSelectedUser(user);
+    setResetPasswordOpen(true);
   };
   
   const handleRemoveBook = async (bookId: string, bookTitle: string) => {
@@ -542,7 +538,7 @@ export default function AdminDashboard() {
                               {(user.status === 'inactive' || user.status === 'blocked') && (
                                 <Button size="sm" variant="outline" onClick={() => handleStatusChange(user.id, 'active')}><CheckCircle className="mr-1 h-3 w-3" /> Activate</Button>
                               )}
-                              <Button size="sm" variant="secondary" onClick={() => handlePasswordReset(user.id)}><KeyRound className="mr-1 h-3 w-3" /> Reset Pass</Button>
+                              <Button size="sm" variant="secondary" onClick={() => handleOpenResetPassword(user)}><KeyRound className="mr-1 h-3 w-3" /> Reset Pass</Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -651,8 +647,18 @@ export default function AdminDashboard() {
           history={getHistoryForUser(selectedBook.issuedTo)}
         />
       )}
+
+      {selectedUser && (
+        <ResetPasswordDialog
+            isOpen={isResetPasswordOpen}
+            onOpenChange={setResetPasswordOpen}
+            user={selectedUser}
+            onPasswordReset={() => {
+                setResetPasswordOpen(false);
+                fetchData();
+            }}
+        />
+      )}
     </div>
   );
 }
-
-    

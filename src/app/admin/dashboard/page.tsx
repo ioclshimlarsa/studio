@@ -15,6 +15,8 @@ import { differenceInDays, parseISO, format } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { CreateUserForm } from '@/components/admin/create-user-form';
+import { CreateBookForm } from '@/components/admin/create-book-form';
+import { BulkUploadForm } from '@/components/admin/bulk-upload-form';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserStatus, resetUserPassword, removeBook } from '@/lib/actions';
 import { downloadCSV } from '@/lib/utils';
@@ -28,6 +30,10 @@ export default function AdminDashboard() {
   const [dataVersion, setDataVersion] = useState(0); 
   const [selectedHistoryUserId, setSelectedHistoryUserId] = useState<string | null>(null);
 
+  const forceRerender = () => {
+    setDataVersion(v => v + 1);
+  };
+  
   // Re-fetch data whenever dataVersion changes
   const allUsers = getUsers();
   const allBooks = getBooks();
@@ -38,10 +44,6 @@ export default function AdminDashboard() {
   const overdueBooks = allBooks.filter((book) => 
     book.status === 'Issued' && book.dueDate && differenceInDays(new Date(), parseISO(book.dueDate)) > 0
   );
-
-  const forceRerender = () => {
-    setDataVersion(v => v + 1);
-  };
 
   const handleSendReminder = (book: Book) => {
     setSelectedBook(book);
@@ -114,7 +116,7 @@ export default function AdminDashboard() {
     }
 
     if (data.length > 0) {
-      await downloadCSV(data, filename);
+      downloadCSV(data, filename); // This now works on the client-side
       toast({ title: 'Report Generated', description: `${filename} has been downloaded.` });
     } else {
       toast({ title: 'No Data', description: 'There is no data to generate a report.', variant: 'destructive' });
@@ -327,47 +329,14 @@ export default function AdminDashboard() {
 
           <TabsContent value="add_books">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Add a New Book</CardTitle>
-                        <CardDescription>Manually enter book details.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="title">Title</Label>
-                                <Input id="title" placeholder="e.g., The Great Gatsby" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="author">Author</Label>
-                                <Input id="author" placeholder="e.g., F. Scott Fitzgerald" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="language">Language</Label>
-                                <Input id="language" placeholder="e.g., English" />
-                            </div>
-                            <Button type="submit" className="w-full">
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Book
-                            </Button>
-                        </form>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Bulk Upload</CardTitle>
-                        <CardDescription>Add multiple books from a CSV file.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-col items-center justify-center space-y-4 h-full">
-                        <div className="flex flex-col items-center space-y-2 text-center">
-                            <Upload className="h-12 w-12 text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground">Drag & drop a CSV file here, or click to select a file.</p>
-                        </div>
-                         <Button variant="outline">
-                           <Upload className="mr-2 h-4 w-4" /> Choose File
-                        </Button>
-                        <p className="text-xs text-muted-foreground">CSV format: title, author, language</p>
-                    </CardContent>
-                </Card>
+                <CreateBookForm onBookCreated={() => {
+                  forceRerender();
+                  setActiveTab('all_books');
+                }} />
+                <BulkUploadForm onUploadComplete={() => {
+                  forceRerender();
+                  setActiveTab('all_books');
+                }}/>
             </div>
           </TabsContent>
           <TabsContent value="manage_users">

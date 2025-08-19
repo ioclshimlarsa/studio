@@ -121,9 +121,10 @@ export async function resetUserPassword(userId: string) {
     const currentUsers = await getUsers();
     const userIndex = currentUsers.findIndex(u => u.id === userId);
     if (userIndex > -1) {
-        currentUsers[userIndex].password = 'password';
+        const newPassword = 'password';
+        currentUsers[userIndex].password = newPassword;
         await saveUsers(currentUsers);
-        return { success: true, message: `Password for ${currentUsers[userIndex].name} has been reset to "password".` };
+        return { success: true, message: `Password for ${currentUsers[userIndex].name} has been reset to "${newPassword}".` };
     }
     return { success: false, message: 'User not found.' };
 }
@@ -246,21 +247,12 @@ export async function approveRequest(bookId: string) {
         currentHistories.push(userHistory);
     }
     
-    const historyEntry = userHistory.history.find(entry => entry.bookId === book.id && !entry.returnDate);
-    
-    if (historyEntry) {
-        // This case should ideally not happen for a 'Requested' book, but as a safeguard
-        historyEntry.issueDate = book.issueDate;
-        historyEntry.dueDate = book.dueDate;
-    } else {
-        userHistory.history.push({
-            bookId: book.id,
-            title: book.title,
-            issueDate: book.issueDate,
-            dueDate: book.dueDate,
-        });
-    }
-
+    userHistory.history.push({
+        bookId: book.id,
+        title: book.title,
+        issueDate: book.issueDate,
+        dueDate: book.dueDate,
+    });
     
     await saveBooks(currentBooks);
     await saveHistories(currentHistories);
@@ -387,10 +379,15 @@ export async function getUserDashboardData(userId: string) {
     const allUsers = await getUsers();
     const allHistories = await getHistories();
     const userHistory = allHistories.find(h => h.userId === userId);
+    
+    if (!userHistory) {
+      console.warn(`No history found for user: ${userId}`);
+    }
+
     return {
         user: allUsers.find(u => u.id === userId),
         allBooks,
-        myHistory: userHistory?.history || [],
+        myHistory: userHistory?.history ?? [],
         myBooks: allBooks.filter(book => book.issuedTo === userId),
     };
 }

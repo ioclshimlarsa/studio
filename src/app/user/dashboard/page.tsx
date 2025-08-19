@@ -214,7 +214,7 @@ export default function UserDashboard() {
                             <CardHeader>
                                 <CardTitle>Browse Library</CardTitle>
                                 <CardDescription>Find your next read and request it.</CardDescription>
-                            </Header>
+                            </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
@@ -316,4 +316,5 @@ export default function UserDashboard() {
             </main>
         </div>
     );
-}
+
+    

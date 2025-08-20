@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Book, Type, Languages } from 'lucide-react';
+import { PlusCircle, Book, Type, Languages, Library } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 function SubmitButton() {
@@ -78,11 +78,17 @@ export function CreateBookForm({ onBookCreated }: CreateBookFormProps) {
                     </div>
                      {state?.fieldErrors?.language && <p className="text-sm font-medium text-destructive">{state.fieldErrors.language}</p>}
                 </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="type">Book Type</Label>
+                    <div className="relative">
+                        <Library className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input id="type" name="type" placeholder="e.g., Novel" required className="pl-10" />
+                    </div>
+                     {state?.fieldErrors?.type && <p className="text-sm font-medium text-destructive">{state.fieldErrors.type}</p>}
+                </div>
                 <SubmitButton />
             </form>
         </CardContent>
     </Card>
   );
 }
-
-    

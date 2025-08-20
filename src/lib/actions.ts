@@ -165,6 +165,7 @@ const addBookSchema = z.object({
     title: z.string().min(1, { message: 'Title is required' }),
     author: z.string().min(1, { message: 'Author is required' }),
     language: z.string().min(1, { message: 'Language is required' }),
+    type: z.string().min(1, { message: 'Type is required' }),
 });
 
 export async function addBook(prevState: any, formData: FormData) {
@@ -177,7 +178,7 @@ export async function addBook(prevState: any, formData: FormData) {
         };
     }
     
-    const { title, author, language } = validatedFields.data;
+    const { title, author, language, type } = validatedFields.data;
     const currentBooks = await getBooks();
     
     const newBook: Book = {
@@ -185,6 +186,7 @@ export async function addBook(prevState: any, formData: FormData) {
         title,
         author,
         language,
+        type,
         status: 'Available',
     };
 
@@ -205,7 +207,7 @@ export async function addBooksFromCSV(prevState: any, formData: FormData) {
         const workbook = read(bytes, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const json = utils.sheet_to_json<{ title: string; author: string; language: string; }>(worksheet);
+        const json = utils.sheet_to_json<{ title: string; author: string; language: string; type: string }>(worksheet);
 
         if (json.length === 0) {
             return { error: 'CSV file is empty or in an invalid format.' };
@@ -213,14 +215,15 @@ export async function addBooksFromCSV(prevState: any, formData: FormData) {
         
         const currentBooks = await getBooks();
         const newBooks: Book[] = json.map((row, index) => {
-             if (!row.title || !row.author || !row.language) {
-                throw new Error(`Row ${index + 2} is missing required fields (title, author, language).`);
+             if (!row.title || !row.author || !row.language || !row.type) {
+                throw new Error(`Row ${index + 2} is missing required fields (title, author, language, type).`);
             }
             return {
                 id: `B${String(currentBooks.length + index + 1).padStart(3, '0')}_${uuidv4().slice(0,4)}`,
                 title: row.title,
                 author: row.author,
                 language: row.language,
+                type: row.type,
                 status: 'Available',
             };
         });
@@ -419,5 +422,3 @@ export async function getUserDashboardData(userId: string) {
         myBooks: allBooks.filter(book => book.issuedTo === userId),
     };
 }
-
-    

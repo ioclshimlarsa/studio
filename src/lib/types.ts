@@ -4,6 +4,7 @@ export interface Book {
   title: string;
   author: string;
   language: string;
+  type: string; // e.g., Fiction, Non-Fiction, Novel, Poetry
   status: 'Available' | 'Issued' | 'Requested';
   issuedTo?: string; // userId
   userName?: string; // user name

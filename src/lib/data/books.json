@@ -1,9 +1,11 @@
+
 [
   {
     "id": "B001",
     "title": "The Great Gatsby",
     "author": "F. Scott Fitzgerald",
     "language": "English",
+    "type": "Novel",
     "status": "Issued",
     "issuedTo": "user01",
     "userName": "Alice",
@@ -15,6 +17,7 @@
     "title": "To Kill a Mockingbird",
     "author": "Harper Lee",
     "language": "English",
+    "type": "Novel",
     "status": "Issued",
     "issuedTo": "user02",
     "userName": "Bob",
@@ -26,6 +29,7 @@
     "title": "1984",
     "author": "George Orwell",
     "language": "English",
+    "type": "Dystopian",
     "status": "Issued",
     "issuedTo": "user01",
     "userName": "Alice",
@@ -37,6 +41,7 @@
     "title": "Pride and Prejudice",
     "author": "Jane Austen",
     "language": "English",
+    "type": "Romance",
     "status": "Issued",
     "issuedTo": "user01",
     "userName": "Alice",
@@ -48,6 +53,7 @@
     "title": "The Catcher in the Rye",
     "author": "J.D. Salinger",
     "language": "English",
+    "type": "Fiction",
     "status": "Issued",
     "issuedTo": "user01",
     "userName": "Alice",
@@ -59,6 +65,7 @@
     "title": "Moby Dick",
     "author": "Herman Melville",
     "language": "English",
+    "type": "Adventure",
     "status": "Available"
   },
   {
@@ -66,6 +73,7 @@
     "title": "War and Peace",
     "author": "Leo Tolstoy",
     "language": "English",
+    "type": "Historical Fiction",
     "status": "Issued",
     "issuedTo": "user01",
     "userName": "Alice",
@@ -77,6 +85,7 @@
     "title": "Don Quixote",
     "author": "Miguel de Cervantes",
     "language": "Spanish",
+    "type": "Satire",
     "status": "Issued",
     "issuedTo": "user02",
     "userName": "Bob",
@@ -88,6 +97,7 @@
     "title": "rani tatt",
     "author": "harmanjeet singh",
     "language": "punjabi",
+    "type": "Poetry",
     "status": "Available"
   }
 ]

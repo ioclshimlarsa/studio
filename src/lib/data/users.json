@@ -1,10 +1,11 @@
+
 [
   {
     "id": "admin01",
     "name": "Admin",
     "email": "admin@library.com",
     "role": "admin",
-    "password": "password12",
+    "password": "password",
     "status": "active"
   },
   {

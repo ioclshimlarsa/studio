@@ -3,6 +3,10 @@
 
 import admin from 'firebase-admin';
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
+import usersData from './data/users.json';
+import booksData from './data/books.json';
+import historiesData from './data/histories.json';
+import bookDemandsData from './data/bookDemands.json';
 
 // --- Firebase Admin SDK Singleton ---
 
@@ -16,7 +20,6 @@ function getDb(): admin.firestore.Firestore {
   try {
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    // Important: Vercel escapes newline characters, so we need to replace them back
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
     if (!projectId || !clientEmail || !privateKey) {
@@ -41,10 +44,52 @@ function getDb(): admin.firestore.Firestore {
   }
 }
 
+// --- Data Migration ---
+
+async function runInitialDataMigration() {
+    const firestore = getDb();
+    const usersCollection = firestore.collection('users');
+    const usersSnapshot = await usersCollection.get();
+
+    // Only migrate data if the users collection is empty
+    if (usersSnapshot.empty) {
+        console.log('Running initial data migration...');
+        const batch = firestore.batch();
+
+        // Migrate Users
+        usersData.forEach((user: User) => {
+            const docRef = firestore.collection('users').doc(user.id);
+            batch.set(docRef, user);
+        });
+
+        // Migrate Books
+        booksData.forEach((book: Book) => {
+            const docRef = firestore.collection('books').doc(book.id);
+            batch.set(docRef, book);
+        });
+        
+        // Migrate Histories
+        historiesData.forEach((history: UserBorrowingHistory) => {
+            const docRef = firestore.collection('histories').doc(history.userId);
+            batch.set(docRef, history);
+        });
+        
+        // Migrate Book Demands
+        bookDemandsData.forEach((demand: BookDemand) => {
+            const docRef = firestore.collection('bookDemands').doc(demand.id);
+            batch.set(docRef, demand);
+        });
+
+        await batch.commit();
+        console.log('Initial data migration completed.');
+    }
+}
+
 
 // --- Generic Firestore Functions ---
 
 async function getData<T>(collectionName: string): Promise<T[]> {
+    await runInitialDataMigration();
     const firestore = getDb();
     try {
         const snapshot = await firestore.collection(collectionName).get();
@@ -65,13 +110,7 @@ async function saveData<T extends { id: string }>(collectionName: string, data: 
     try {
         const batch = firestore.batch();
         const collectionRef = firestore.collection(collectionName);
-
-        // Get all existing document IDs in the collection
-        const snapshot = await collectionRef.get();
-        const existingIds = new Set(snapshot.docs.map(doc => doc.id));
-        const newDataIds = new Set(data.map(item => item.id));
-
-        // Set/update documents from the new data array
+        
         for (const item of data) {
             if (!item.id) {
                 console.warn(`Item in collection ${collectionName} has no ID. Skipping.`);
@@ -79,14 +118,6 @@ async function saveData<T extends { id: string }>(collectionName: string, data: 
             }
             const docRef = collectionRef.doc(item.id);
             batch.set(docRef, item);
-        }
-
-        // Delete documents that are in Firestore but not in the new data array
-        for (const id of existingIds) {
-            if (!newDataIds.has(id)) {
-                const docRef = collectionRef.doc(id);
-                batch.delete(docRef);
-            }
         }
         
         await batch.commit();

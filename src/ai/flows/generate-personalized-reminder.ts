@@ -9,7 +9,7 @@
  * - GeneratePersonalizedReminderOutput - The return type for the generatePersonalizedReminder function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, initializeGenkit} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GeneratePersonalizedReminderInputSchema = z.object({
@@ -38,14 +38,12 @@ export type GeneratePersonalizedReminderOutput = z.infer<
 export async function generatePersonalizedReminder(
   input: GeneratePersonalizedReminderInput
 ): Promise<GeneratePersonalizedReminderOutput> {
-  return generatePersonalizedReminderFlow(input);
-}
-
-const prompt = ai.definePrompt({
-  name: 'generatePersonalizedReminderPrompt',
-  input: {schema: GeneratePersonalizedReminderInputSchema},
-  output: {schema: GeneratePersonalizedReminderOutputSchema},
-  system: `You are an AI assistant tasked with generating personalized reminder messages for users with overdue books.
+  initializeGenkit();
+  const prompt = ai.definePrompt({
+    name: 'generatePersonalizedReminderPrompt',
+    input: {schema: GeneratePersonalizedReminderInputSchema},
+    output: {schema: GeneratePersonalizedReminderOutputSchema},
+    system: `You are an AI assistant tasked with generating personalized reminder messages for users with overdue books.
 
   The goal is to generate a gentle and effective reminder message that encourages the user to return the book promptly.
   Leverage the user's past borrowing history to tailor the tone and format of the message.
@@ -64,16 +62,18 @@ const prompt = ai.definePrompt({
   Then encourage them to return the book as soon as possible.
   Finally, thank them for using our library and include a friendly closing.
 `,
-});
+  });
 
-const generatePersonalizedReminderFlow = ai.defineFlow(
-  {
-    name: 'generatePersonalizedReminderFlow',
-    inputSchema: GeneratePersonalizedReminderInputSchema,
-    outputSchema: GeneratePersonalizedReminderOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
-  }
-);
+  const generatePersonalizedReminderFlow = ai.defineFlow(
+    {
+      name: 'generatePersonalizedReminderFlow',
+      inputSchema: GeneratePersonalizedReminderInputSchema,
+      outputSchema: GeneratePersonalizedReminderOutputSchema,
+    },
+    async input => {
+      const {output} = await prompt(input);
+      return output!;
+    }
+  );
+  return generatePersonalizedReminderFlow(input);
+}

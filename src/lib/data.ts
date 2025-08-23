@@ -4,10 +4,6 @@
 import admin from 'firebase-admin';
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
 
-// These imports are needed to register the flows with Genkit
-import '@/ai/flows/generate-personalized-reminder.ts';
-import '@/ai/flows/generate-welcome-email.ts';
-
 
 // --- Firebase Admin SDK Singleton ---
 

@@ -9,7 +9,7 @@
  * - WelcomeEmailOutput - The return type for the generateWelcomeEmail function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, initializeGenkit} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const WelcomeEmailInputSchema = z.object({
@@ -28,14 +28,12 @@ export type WelcomeEmailOutput = z.infer<typeof WelcomeEmailOutputSchema>;
 export async function generateWelcomeEmail(
   input: WelcomeEmailInput
 ): Promise<WelcomeEmailOutput> {
-  return generateWelcomeEmailFlow(input);
-}
-
-const prompt = ai.definePrompt({
-  name: 'generateWelcomeEmailPrompt',
-  input: {schema: WelcomeEmailInputSchema},
-  output: {schema: WelcomeEmailOutputSchema},
-  system: `You are an AI assistant for Sarb Sukh Sanjhi library. Your task is to generate a warm and informative welcome email for a new user.
+  initializeGenkit();
+  const prompt = ai.definePrompt({
+    name: 'generateWelcomeEmailPrompt',
+    input: {schema: WelcomeEmailInputSchema},
+    output: {schema: WelcomeEmailOutputSchema},
+    system: `You are an AI assistant for Sarb Sukh Sanjhi library. Your task is to generate a warm and informative welcome email for a new user.
 
   The email should:
   1. Have a welcoming subject line.
@@ -52,23 +50,25 @@ const prompt = ai.definePrompt({
   
   Generate the subject and an HTML body for the email.
 `,
-});
+  });
 
-const generateWelcomeEmailFlow = ai.defineFlow(
-  {
-    name: 'generateWelcomeEmailFlow',
-    inputSchema: WelcomeEmailInputSchema,
-    outputSchema: WelcomeEmailOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    // In a real app, you would integrate an email sending service here.
-    // For now, we just log it to the console.
-    console.log('--- NEW USER WELCOME EMAIL ---');
-    console.log(`To: ${input.email}`);
-    console.log(`Subject: ${output!.subject}`);
-    console.log(`Body: \n${output!.body}`);
-    console.log('-----------------------------');
-    return output!;
-  }
-);
+  const generateWelcomeEmailFlow = ai.defineFlow(
+    {
+      name: 'generateWelcomeEmailFlow',
+      inputSchema: WelcomeEmailInputSchema,
+      outputSchema: WelcomeEmailOutputSchema,
+    },
+    async input => {
+      const {output} = await prompt(input);
+      // In a real app, you would integrate an email sending service here.
+      // For now, we just log it to the console.
+      console.log('--- NEW USER WELCOME EMAIL ---');
+      console.log(`To: ${input.email}`);
+      console.log(`Subject: ${output!.subject}`);
+      console.log(`Body: \n${output!.body}`);
+      console.log('-----------------------------');
+      return output!;
+    }
+  );
+  return generateWelcomeEmailFlow(input);
+}

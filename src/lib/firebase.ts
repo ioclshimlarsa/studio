@@ -1,6 +1,8 @@
 
 import admin from 'firebase-admin';
 import { config } from 'dotenv';
+import '@/ai/flows/generate-personalized-reminder.ts';
+import '@/ai/flows/generate-welcome-email.ts';
 
 config();
 

@@ -3,51 +3,10 @@
 
 import admin from 'firebase-admin';
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
-import initialUsers from './data/users.json';
-import initialBooks from './data/books.json';
-import initialHistories from './data/histories.json';
-import initialBookDemands from './data/bookDemands.json';
 
 // --- Firebase Admin SDK Singleton ---
 
 let db: admin.firestore.Firestore;
-
-async function runInitialDataMigration() {
-    const firestore = getDb();
-    
-    // Helper function to check and populate a collection
-    const populateCollection = async (collectionName: string, data: any[]) => {
-        const collectionRef = firestore.collection(collectionName);
-        const snapshot = await collectionRef.limit(1).get();
-        if (snapshot.empty) {
-            console.log(`Populating ${collectionName} with initial data...`);
-            const batch = firestore.batch();
-            data.forEach((item) => {
-                // Ensure there's an id for the document reference
-                if (item.id) {
-                    const docRef = collectionRef.doc(item.id);
-                    batch.set(docRef, item);
-                } else {
-                    console.warn(`Skipping item in ${collectionName} due to missing ID.`);
-                }
-            });
-            await batch.commit();
-            console.log(`${collectionName} populated successfully.`);
-        }
-    };
-
-    try {
-        await populateCollection('users', initialUsers);
-        await populateCollection('books', initialBooks);
-        await populateCollection('histories', initialHistories);
-        await populateCollection('bookDemands', initialBookDemands);
-    } catch (error) {
-        console.error("Error during initial data migration:", error);
-        // We don't re-throw the error, as the app might still function in some capacity
-        // or the error might be temporary (e.g., transient network issues).
-    }
-}
-
 
 function getDb(): admin.firestore.Firestore {
   if (db) {
@@ -86,7 +45,6 @@ function getDb(): admin.firestore.Firestore {
 // --- Generic Firestore Functions ---
 
 async function getData<T>(collectionName: string): Promise<T[]> {
-    await runInitialDataMigration();
     const firestore = getDb();
     try {
         const snapshot = await firestore.collection(collectionName).get();

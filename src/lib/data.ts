@@ -4,6 +4,10 @@
 import { getDb } from './firebase';
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
 
+// These imports are needed to register the flows with Genkit
+import '@/ai/flows/generate-personalized-reminder.ts';
+import '@/ai/flows/generate-welcome-email.ts';
+
 // Import the initial data directly for the one-time migration.
 import initialUsers from './data/users.json';
 import initialBooks from './data/books.json';

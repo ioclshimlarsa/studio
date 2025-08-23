@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Book, Type, Languages, Library } from 'lucide-react';
+import { PlusCircle, Book, Type, Languages, Library, Building, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 function SubmitButton() {
@@ -53,7 +53,7 @@ export function CreateBookForm({ onBookCreated }: CreateBookFormProps) {
             <CardDescription>Manually enter book details.</CardDescription>
         </CardHeader>
         <CardContent>
-            <form ref={formRef} action={formAction} className="space-y-6">
+            <form ref={formRef} action={formAction} className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="title">Title</Label>
                     <div className="relative">
@@ -85,6 +85,20 @@ export function CreateBookForm({ onBookCreated }: CreateBookFormProps) {
                         <Input id="type" name="type" placeholder="e.g., Novel" required className="pl-10" />
                     </div>
                      {state?.fieldErrors?.type && <p className="text-sm font-medium text-destructive">{state.fieldErrors.type}</p>}
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="publication">Publication</Label>
+                    <div className="relative">
+                        <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input id="publication" name="publication" placeholder="e.g., Penguin Books" className="pl-10" />
+                    </div>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="price">Price</Label>
+                    <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input id="price" name="price" type="number" step="0.01" placeholder="e.g., 19.99" className="pl-10" />
+                    </div>
                 </div>
                 <SubmitButton />
             </form>

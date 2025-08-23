@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban, Trash2, FileDown, History, BookMarked, Languages, Type } from 'lucide-react';
+import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban, Trash2, FileDown, History, BookMarked, Languages, Type, Building, DollarSign } from 'lucide-react';
 import { ReminderDialog } from '@/components/admin/reminder-dialog';
 import { ResetPasswordDialog } from '@/components/admin/reset-password-dialog';
 import { differenceInDays, parseISO, format } from 'date-fns';
@@ -66,7 +66,7 @@ export default function AdminDashboard() {
   );
   
   const uniqueLanguages = ['all', ...Array.from(new Set(allBooks.map(book => book.language)))];
-  const uniqueTypes = ['all', ...Array.from(new Set(allBooks.map(book => book.type)))];
+  const uniqueTypes = ['all', ...Array.from(new Set(allBooks.map(book => book.type).filter(Boolean)))];
 
   const filteredBooksByLanguage = languageFilter === 'all' 
     ? allBooks 
@@ -415,6 +415,8 @@ export default function AdminDashboard() {
                       <TableHead>Title</TableHead>
                       <TableHead>Author</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>Publication</TableHead>
+                      <TableHead>Price</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Issued To</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -426,6 +428,8 @@ export default function AdminDashboard() {
                         <TableCell className="font-medium">{book.title}</TableCell>
                         <TableCell>{book.author}</TableCell>
                         <TableCell>{book.type}</TableCell>
+                        <TableCell>{book.publication}</TableCell>
+                        <TableCell>{book.price ? `$${book.price.toFixed(2)}` : 'N/A'}</TableCell>
                         <TableCell>
                           <Badge variant={book.status === 'Available' ? 'secondary' : book.status === 'Issued' ? 'default' : 'outline' } className="capitalize">
                             {book.status}

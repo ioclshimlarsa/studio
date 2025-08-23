@@ -81,7 +81,7 @@ export function BulkUploadForm({ onUploadComplete }: BulkUploadFormProps) {
             />
           </div>
           <SubmitButton />
-          <p className="text-xs text-muted-foreground">CSV format: title, author, language, type</p>
+          <p className="text-xs text-muted-foreground">CSV format: title,author,language,type,publication,price</p>
           {state?.error && <p className="text-sm font-medium text-destructive">{state.error}</p>}
         </form>
       </CardContent>

@@ -102,7 +102,7 @@ export default function UserDashboard() {
     );
 
     const uniqueLanguages = ['all', ...Array.from(new Set(allBooks.map(book => book.language)))];
-    const uniqueTypes = ['all', ...Array.from(new Set(allBooks.map(book => book.type)))];
+    const uniqueTypes = ['all', ...Array.from(new Set(allBooks.map(book => book.type).filter(Boolean)))];
 
     const filteredBooksByLanguage = languageFilter === 'all' 
         ? allBooks 
@@ -259,6 +259,8 @@ export default function UserDashboard() {
                                             <TableHead>Author</TableHead>
                                             <TableHead>Language</TableHead>
                                             <TableHead>Type</TableHead>
+                                            <TableHead>Publication</TableHead>
+                                            <TableHead>Price</TableHead>
                                             <TableHead className="text-right">Action</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -269,6 +271,8 @@ export default function UserDashboard() {
                                                 <TableCell>{book.author}</TableCell>
                                                 <TableCell>{book.language}</TableCell>
                                                 <TableCell>{book.type}</TableCell>
+                                                <TableCell>{book.publication}</TableCell>
+                                                <TableCell>{book.price ? `$${book.price.toFixed(2)}` : 'N/A'}</TableCell>
                                                 <TableCell className="text-right">
                                                     {book.status === 'Available' ? (
                                                         <Button size="sm" onClick={() => handleRequestBook(book.id)}>Request</Button>

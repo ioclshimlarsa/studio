@@ -4,7 +4,6 @@
 import admin from 'firebase-admin';
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
 
-
 // --- Firebase Admin SDK Singleton ---
 
 let db: admin.firestore.Firestore;

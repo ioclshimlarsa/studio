@@ -3,6 +3,7 @@
 
 import { getDb } from './firebase';
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
+import { config } from 'dotenv';
 
 // These imports are needed to register the flows with Genkit
 import '@/ai/flows/generate-personalized-reminder.ts';
@@ -13,6 +14,8 @@ import initialUsers from './data/users.json';
 import initialBooks from './data/books.json';
 import initialHistories from './data/histories.json';
 import initialBookDemands from './data/bookDemands.json';
+
+config(); // Load environment variables from .env file
 
 // A simple in-memory flag to prevent re-running the migration on every server restart in dev mode.
 let migrationHasRun = false;

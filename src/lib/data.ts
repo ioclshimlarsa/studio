@@ -44,41 +44,33 @@ function getDb(): admin.firestore.Firestore {
   }
 }
 
-// --- Data Migration ---
-
 async function runInitialDataMigration() {
     const firestore = getDb();
     
-    // Check if all collections are non-empty
     const usersSnapshot = await firestore.collection('users').limit(1).get();
     const booksSnapshot = await firestore.collection('books').limit(1).get();
     const historiesSnapshot = await firestore.collection('histories').limit(1).get();
     const bookDemandsSnapshot = await firestore.collection('bookDemands').limit(1).get();
 
-    // Only migrate data if one of the collections is empty
-    if (usersSnapshot.empty || booksSnapshot.empty || historiesSnapshot.empty || bookDemandsSnapshot.empty) {
-        console.log('One or more collections are empty. Running initial data migration...');
+    if (usersSnapshot.empty && booksSnapshot.empty && historiesSnapshot.empty && bookDemandsSnapshot.empty) {
+        console.log('All collections are empty. Running initial data migration...');
         const batch = firestore.batch();
 
-        // Migrate Users
         usersData.forEach((user: User) => {
             const docRef = firestore.collection('users').doc(user.id);
             batch.set(docRef, user);
         });
 
-        // Migrate Books
         booksData.forEach((book: Book) => {
             const docRef = firestore.collection('books').doc(book.id);
             batch.set(docRef, book);
         });
         
-        // Migrate Histories
         historiesData.forEach((history: UserBorrowingHistory) => {
             const docRef = firestore.collection('histories').doc(history.userId);
             batch.set(docRef, history);
         });
         
-        // Migrate Book Demands
         bookDemandsData.forEach((demand: BookDemand) => {
             const docRef = firestore.collection('bookDemands').doc(demand.id);
             batch.set(docRef, demand);
@@ -93,39 +85,35 @@ async function runInitialDataMigration() {
 // --- Generic Firestore Functions ---
 
 async function getData<T>(collectionName: string): Promise<T[]> {
-    await runInitialDataMigration();
-    const firestore = getDb();
     try {
+        await runInitialDataMigration();
+        const firestore = getDb();
         const snapshot = await firestore.collection(collectionName).get();
         if (snapshot.empty) {
-            console.log(`No documents found in ${collectionName} collection.`);
             return [];
         }
         return snapshot.docs.map(doc => doc.data() as T);
     } catch (error) {
         console.error(`Error getting data from ${collectionName}:`, error);
-        // In case of error (e.g., permissions), return an empty array to avoid crashing the app
         return [];
     }
 }
 
-async function saveData<T extends { id: string }>(collectionName: string, data: T[]): Promise<void> {
+async function saveData<T extends { id?: string; userId?: string }>(collectionName: string, data: T[]): Promise<void> {
     const firestore = getDb();
     try {
         const batch = firestore.batch();
         const collectionRef = firestore.collection(collectionName);
         
-        // Get all existing documents to delete them
         const snapshot = await collectionRef.get();
         snapshot.docs.forEach(doc => batch.delete(doc.ref));
 
-        // Add new data
         for (const item of data) {
-            if (!item.id && collectionName !== 'histories') { // histories are keyed by userId
-                console.warn(`Item in collection ${collectionName} has no ID. Skipping.`);
+            const docId = item.id || item.userId;
+            if (!docId) {
+                console.warn(`Item in collection ${collectionName} has no ID/userId. Skipping.`);
                 continue;
             }
-            const docId = collectionName === 'histories' ? (item as any).userId : item.id;
             const docRef = collectionRef.doc(docId);
             batch.set(docRef, item);
         }

@@ -48,12 +48,16 @@ function getDb(): admin.firestore.Firestore {
 
 async function runInitialDataMigration() {
     const firestore = getDb();
-    const usersCollection = firestore.collection('users');
-    const usersSnapshot = await usersCollection.get();
+    
+    // Check if all collections are non-empty
+    const usersSnapshot = await firestore.collection('users').limit(1).get();
+    const booksSnapshot = await firestore.collection('books').limit(1).get();
+    const historiesSnapshot = await firestore.collection('histories').limit(1).get();
+    const bookDemandsSnapshot = await firestore.collection('bookDemands').limit(1).get();
 
-    // Only migrate data if the users collection is empty
-    if (usersSnapshot.empty) {
-        console.log('Running initial data migration...');
+    // Only migrate data if one of the collections is empty
+    if (usersSnapshot.empty || booksSnapshot.empty || historiesSnapshot.empty || bookDemandsSnapshot.empty) {
+        console.log('One or more collections are empty. Running initial data migration...');
         const batch = firestore.batch();
 
         // Migrate Users
@@ -111,12 +115,18 @@ async function saveData<T extends { id: string }>(collectionName: string, data: 
         const batch = firestore.batch();
         const collectionRef = firestore.collection(collectionName);
         
+        // Get all existing documents to delete them
+        const snapshot = await collectionRef.get();
+        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+
+        // Add new data
         for (const item of data) {
-            if (!item.id) {
+            if (!item.id && collectionName !== 'histories') { // histories are keyed by userId
                 console.warn(`Item in collection ${collectionName} has no ID. Skipping.`);
                 continue;
             }
-            const docRef = collectionRef.doc(item.id);
+            const docId = collectionName === 'histories' ? (item as any).userId : item.id;
+            const docRef = collectionRef.doc(docId);
             batch.set(docRef, item);
         }
         
@@ -126,6 +136,7 @@ async function saveData<T extends { id: string }>(collectionName: string, data: 
         throw new Error(`Failed to save data to ${collectionName}.`);
     }
 }
+
 
 // --- Public Data Access Functions ---
 

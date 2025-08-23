@@ -1,7 +1,7 @@
 
 'use server';
 
-import { db } from './firebase';
+import { getDb } from './firebase';
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
 
 // Import the initial data directly for the one-time migration.
@@ -16,6 +16,7 @@ let migrationHasRun = false;
 async function runInitialDataMigration() {
     if (migrationHasRun) return;
 
+    const db = getDb();
     console.log("Checking if initial data migration is needed...");
 
     const migrationCheckRef = db.collection('app-metadata').doc('migration-status');
@@ -43,6 +44,11 @@ async function runInitialDataMigration() {
         const collectionRef = db.collection(collectionName);
         console.log(`Migrating ${data.length} documents to ${collectionName}...`);
         data.forEach((doc) => {
+            // Ensure doc has an ID, if not, Firestore can generate one but our structure relies on it.
+            if (!doc.id) {
+                console.warn(`Document in ${collectionName} is missing an ID. Skipping.`);
+                return;
+            }
             const docRef = collectionRef.doc(doc.id);
             batch.set(docRef, doc);
         });
@@ -68,6 +74,7 @@ async function runInitialDataMigration() {
 
 async function getData<T>(collectionName: string): Promise<T[]> {
     await runInitialDataMigration();
+    const db = getDb();
     try {
         const snapshot = await db.collection(collectionName).get();
         if (snapshot.empty) {
@@ -83,6 +90,7 @@ async function getData<T>(collectionName: string): Promise<T[]> {
 }
 
 async function saveData<T extends { id: string }>(collectionName: string, data: T[]): Promise<void> {
+    const db = getDb();
     try {
         const batch = db.batch();
         const collectionRef = db.collection(collectionName);

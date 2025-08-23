@@ -3,13 +3,11 @@
 
 import admin from 'firebase-admin';
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
-import { config } from 'dotenv';
 
 // These imports are needed to register the flows with Genkit
 import '@/ai/flows/generate-personalized-reminder.ts';
 import '@/ai/flows/generate-welcome-email.ts';
 
-config(); 
 
 // --- Firebase Admin SDK Singleton ---
 
@@ -23,6 +21,7 @@ function getDb(): admin.firestore.Firestore {
   try {
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    // Important: Vercel escapes newline characters, so we need to replace them back
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
     if (!projectId || !clientEmail || !privateKey) {

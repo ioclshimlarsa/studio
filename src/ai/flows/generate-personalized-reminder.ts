@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -44,7 +45,7 @@ const prompt = ai.definePrompt({
   name: 'generatePersonalizedReminderPrompt',
   input: {schema: GeneratePersonalizedReminderInputSchema},
   output: {schema: GeneratePersonalizedReminderOutputSchema},
-  prompt: `You are an AI assistant tasked with generating personalized reminder messages for users with overdue books.
+  system: `You are an AI assistant tasked with generating personalized reminder messages for users with overdue books.
 
   The goal is to generate a gentle and effective reminder message that encourages the user to return the book promptly.
   Leverage the user's past borrowing history to tailor the tone and format of the message.
@@ -52,10 +53,10 @@ const prompt = ai.definePrompt({
   If the user has a history of on-time returns, use a friendly and appreciative tone.
   If the user has a history of late returns, use a slightly more firm but still polite tone.
 
-  User ID: {{{userId}}}
-  Book Title: {{{bookTitle}}}
-  Due Date: {{{dueDate}}}
-  Borrowing History: {{{borrowingHistory}}}
+  User ID: ${'{{userId}}'}
+  Book Title: ${'{{bookTitle}}'}
+  Due Date: ${'{{dueDate}}'}
+  Borrowing History: ${'{{borrowingHistory}}'}
 
   Compose a personalized reminder message that considers the above information.  The message should be brief (under 50 words).
   Start by greeting the user by their user ID.

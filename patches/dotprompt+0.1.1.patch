@@ -1,0 +1,17 @@
+diff --git a/node_modules/dotprompt/dist/index.js b/node_modules/dotprompt/dist/index.js
+index f328157..518a38b 100644
+--- a/node_modules/dotprompt/dist/index.js
++++ b/node_modules/dotprompt/dist/index.js
+@@ -102,11 +102,6 @@
+     }
+ }
+ if (typeof require !== 'undefined' && require.extensions) {
+-    for (const ext of ['.prompt', '.prompt.md', '.md']) {
+-        require.extensions[ext] = (module, filename) => {
+-            const prompt = loadPrompt(filename);
+-            module.exports = prompt;
+-        };
+-    }
+ }
+ //# sourceMappingURL=index.js.map
+\ No newline at end of file

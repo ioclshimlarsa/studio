@@ -35,7 +35,7 @@ const prompt = ai.definePrompt({
   name: 'generateWelcomeEmailPrompt',
   input: {schema: WelcomeEmailInputSchema},
   output: {schema: WelcomeEmailOutputSchema},
-  prompt: `You are an AI assistant for Sarb Sukh Sanjhi library. Your task is to generate a warm and informative welcome email for a new user.
+  system: `You are an AI assistant for Sarb Sukh Sanjhi library. Your task is to generate a warm and informative welcome email for a new user.
 
   The email should:
   1. Have a welcoming subject line.
@@ -46,9 +46,9 @@ const prompt = ai.definePrompt({
   6. End with a friendly closing.
 
   User Details:
-  - Name: {{{name}}}
-  - User ID: {{{userId}}}
-  - Email: {{{email}}}
+  - Name: ${'{{name}}'}
+  - User ID: ${'{{userId}}'}
+  - Email: ${'{{email}}'}
   
   Generate the subject and an HTML body for the email.
 `,

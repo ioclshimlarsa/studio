@@ -203,8 +203,6 @@ export async function addBooksFromCSV(prevState: any, formData: FormData) {
             return { error: 'CSV file is empty or in an invalid format.' };
         }
         
-        // We get the count of current books to create unique IDs.
-        // This is not perfectly safe in a high-concurrency environment, but sufficient for this app.
         const currentBookCount = (await getBooks()).length;
 
         const newBooks: Book[] = json.map((row, index) => {
@@ -246,14 +244,12 @@ export async function approveRequest(bookId: string) {
         return { success: false, message: 'No user associated with this request.' };
     }
 
-    // Update book status
     const issueDate = new Date();
     const dueDate = add(issueDate, { days: 30 });
     book.status = 'Issued';
     book.issueDate = formatISO(issueDate);
     book.dueDate = formatISO(dueDate);
     
-    // Update or create user history
     let userHistory = currentHistories.find(h => h.userId === userId);
     if (!userHistory) {
         userHistory = { userId, history: [] };
@@ -285,7 +281,6 @@ export async function rejectRequest(bookId: string) {
     const book = currentBooks[bookIndex];
     const oldUserName = book.userName;
 
-    // Make book available again
     book.status = 'Available';
     delete book.issuedTo;
     delete book.userName;
@@ -326,14 +321,12 @@ export async function returnBook(bookId: string, userId: string) {
 
     const book = currentBooks[bookIndex];
 
-    // Update book status to available
     book.status = 'Available';
     delete book.issuedTo;
     delete book.userName;
     delete book.issueDate;
     delete book.dueDate;
 
-    // Update history with return date
     const userHistory = currentHistories.find(h => h.userId === userId);
     if (userHistory) {
         const historyEntry = userHistory.history.find(entry => entry.bookId === bookId && !entry.returnDate);
@@ -376,7 +369,6 @@ export async function demandBook(userName: string, formData: FormData) {
   return { success: true, message: 'Your book demand has been submitted successfully.' };
 }
 
-// Action to get all data for the admin dashboard
 export async function getAdminDashboardData() {
     const users = await getUsers();
     const books = await getBooks();
@@ -390,7 +382,6 @@ export async function getAdminDashboardData() {
     };
 }
 
-// Action to get data for a specific user's dashboard
 export async function getUserDashboardData(userId: string) {
     const allBooks = await getBooks();
     const allUsers = await getUsers();

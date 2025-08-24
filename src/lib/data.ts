@@ -1,4 +1,6 @@
 
+'use server';
+
 import admin from 'firebase-admin';
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
 import usersData from './data/users.json';
@@ -11,71 +13,68 @@ import bookDemandsData from './data/bookDemands.json';
 let db: admin.firestore.Firestore | null = null;
 
 function initializeFirebase(): admin.firestore.Firestore | null {
-  if (db) {
-    return db;
-  }
-  // Only initialize firebase if credentials are provided
-  if (process.env.FIREBASE_PROJECT_ID) {
-    try {
-      const projectId = process.env.FIREBASE_PROJECT_ID;
-      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-
-      if (!projectId || !clientEmail || !privateKey) {
-        // Gracefully return null if credentials are not fully set
-        // This allows the app to run in a local environment without firebase
-        console.log('Firebase environment variables are not fully set. Falling back to JSON data.');
-        return null;
-      }
-
-      if (!admin.apps.length) {
-        admin.initializeApp({
-          credential: admin.credential.cert({
-            projectId,
-            clientEmail,
-            privateKey,
-          }),
-        });
-        console.log('Firebase Admin SDK initialized successfully.');
-      }
-      db = admin.firestore();
-      return db;
-    } catch (error: any) {
-      console.error('Firebase admin initialization error, falling back to JSON data:', error.message);
-      // Do not throw here to allow fallback to JSON
-      return null;
+    if (db) {
+        return db;
     }
-  }
-  // If no credentials, return null
-  console.log('Firebase environment variables not found. Using JSON data as a fallback.');
-  return null;
+    // Only initialize firebase if credentials are provided
+    if (process.env.FIREBASE_PROJECT_ID) {
+        try {
+            const projectId = process.env.FIREBASE_PROJECT_ID;
+            const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+            const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+            if (!projectId || !clientEmail || !privateKey) {
+                console.log('Firebase environment variables are not fully set. Falling back to JSON data.');
+                return null;
+            }
+
+            if (!admin.apps.length) {
+                admin.initializeApp({
+                    credential: admin.credential.cert({
+                        projectId,
+                        clientEmail,
+                        privateKey,
+                    }),
+                });
+                console.log('Firebase Admin SDK initialized successfully.');
+            }
+            db = admin.firestore();
+            return db;
+        } catch (error: any) {
+            console.error('Firebase admin initialization error, falling back to JSON data:', error.message);
+            return null;
+        }
+    }
+    console.log('Firebase environment variables not found. Using JSON data as a fallback.');
+    return null;
 }
 
+// Initialize Firebase once when the module is loaded
 const firestore = initializeFirebase();
 
-async function runInitialDataMigration(firestore: admin.firestore.Firestore) {
-    if (!firestore) return;
+async function runInitialDataMigration(fs: admin.firestore.Firestore) {
+    if (!fs) return;
     try {
-        const usersCollection = firestore.collection('users');
+        const usersCollection = fs.collection('users');
         const usersSnapshot = await usersCollection.get();
         if (usersSnapshot.empty) {
             console.log('Users collection is empty. Populating with initial data...');
-            const batch = firestore.batch();
+            const batch = fs.batch();
 
             (usersData as User[]).forEach(user => {
-                const docRef = firestore.collection('users').doc(user.id);
+                const docRef = fs.collection('users').doc(user.id);
                 batch.set(docRef, user);
             });
             (booksData as Book[]).forEach(book => {
-                const docRef = firestore.collection('books').doc(book.id);
+                const docRef = fs.collection('books').doc(book.id);
                 batch.set(docRef, book);
             });
             (historiesData as UserBorrowingHistory[]).forEach(history => {
-                const docRef = firestore.collection('histories').doc(history.userId);
+                const docRef = fs.collection('histories').doc(history.userId);
                 batch.set(docRef, history);
             });
             (bookDemandsData as BookDemand[]).forEach(demand => {
-                const docRef = firestore.collection('bookDemands').doc(demand.id);
+                const docRef = fs.collection('bookDemands').doc(demand.id);
                 batch.set(docRef, demand);
             });
 
@@ -100,14 +99,9 @@ async function getData<T>(collectionName: string, fallbackData: T[]): Promise<T[
     }
     try {
         const snapshot = await firestore.collection(collectionName).get();
-        // NOTE: Firestore doesn't return data if the collection was created but is empty.
-        // We will only fallback to local data if the database connection itself failed.
-        // A truly empty collection should return an empty array.
         if (snapshot.empty) {
-            // Check if the fallback data should be used instead
             const metadataDoc = await firestore.collection('internal_metadata').doc('data_state').get();
             if (!metadataDoc.exists) {
-                 // This indicates that data has never been successfully written, so we can use fallback.
                  return fallbackData;
             }
         }
@@ -141,7 +135,6 @@ async function saveData<T extends { id?: string; userId?: string }>(collectionNa
             batch.set(docRef, item);
         }
         
-        // Mark that data has been written
         const metadataRef = firestore.collection('internal_metadata').doc('data_state');
         batch.set(metadataRef, { lastUpdated: new Date().toISOString() });
         
@@ -162,15 +155,15 @@ let localBookDemands: BookDemand[] = [...bookDemandsData];
 
 // --- Public Data Access Functions ---
 
-export const getUsers = (): Promise<User[]> => getData<User>('users', localUsers);
-export const getBooks = (): Promise<Book[]> => getData<Book>('books', localBooks);
-export const getHistories = (): Promise<UserBorrowingHistory[]> => getData<UserBorrowingHistory>('histories', localHistories);
-export const getBookDemands = (): Promise<BookDemand[]> => getData<BookDemand>('bookDemands', localBookDemands);
+export const getUsers = async (): Promise<User[]> => getData<User>('users', localUsers);
+export const getBooks = async (): Promise<Book[]> => getData<Book>('books', localBooks);
+export const getHistories = async (): Promise<UserBorrowingHistory[]> => getData<UserBorrowingHistory>('histories', localHistories);
+export const getBookDemands = async (): Promise<BookDemand[]> => getData<BookDemand>('bookDemands', localBookDemands);
 
 
 // --- Public Data Saving Functions ---
 
-export const saveUsers = (data: User[]) => saveData<User>('users', data, (d) => { localUsers = d; });
-export const saveBooks = (data: Book[]) => saveData<Book>('books', data, (d) => { localBooks = d; });
-export const saveHistories = (data: UserBorrowingHistory[]) => saveData<UserBorrowingHistory>('histories', data, (d) => { localHistories = d; });
-export const saveBookDemands = (data: BookDemand[]) => saveData<BookDemand>('bookDemands', data, (d) => { localBookDemands = d; });
+export const saveUsers = async (data: User[]) => saveData<User>('users', data, (d) => { localUsers = d; });
+export const saveBooks = async (data: Book[]) => saveData<Book>('books', data, (d) => { localBooks = d; });
+export const saveHistories = async (data: UserBorrowingHistory[]) => saveData<UserBorrowingHistory>('histories', data, (d) => { localHistories = d; });
+export const saveBookDemands = async (data: BookDemand[]) => saveData<BookDemand>('bookDemands', data, (d) => { localBookDemands = d; });

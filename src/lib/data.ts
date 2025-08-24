@@ -162,15 +162,15 @@ let localBookDemands: BookDemand[] = [...bookDemandsData];
 
 // --- Public Data Access Functions ---
 
-export const getUsers = async (): Promise<User[]> => getData<User>('users', localUsers);
-export const getBooks = async (): Promise<Book[]> => getData<Book>('books', localBooks);
-export const getHistories = async (): Promise<UserBorrowingHistory[]> => getData<UserBorrowingHistory>('histories', localHistories);
-export const getBookDemands = async (): Promise<BookDemand[]> => getData<BookDemand>('bookDemands', localBookDemands);
+export const getUsers = (): Promise<User[]> => getData<User>('users', localUsers);
+export const getBooks = (): Promise<Book[]> => getData<Book>('books', localBooks);
+export const getHistories = (): Promise<UserBorrowingHistory[]> => getData<UserBorrowingHistory>('histories', localHistories);
+export const getBookDemands = (): Promise<BookDemand[]> => getData<BookDemand>('bookDemands', localBookDemands);
 
 
 // --- Public Data Saving Functions ---
 
-export const saveUsers = async (data: User[]) => saveData<User>('users', data, (d) => { localUsers = d; });
-export const saveBooks = async (data: Book[]) => saveData<Book>('books', data, (d) => { localBooks = d; });
-export const saveHistories = async (data: UserBorrowingHistory[]) => saveData<UserBorrowingHistory>('histories', data, (d) => { localHistories = d; });
-export const saveBookDemands = async (data: BookDemand[]) => saveData<BookDemand>('bookDemands', data, (d) => { localBookDemands = d; });
+export const saveUsers = (data: User[]) => saveData<User>('users', data, (d) => { localUsers = d; });
+export const saveBooks = (data: Book[]) => saveData<Book>('books', data, (d) => { localBooks = d; });
+export const saveHistories = (data: UserBorrowingHistory[]) => saveData<UserBorrowingHistory>('histories', data, (d) => { localHistories = d; });
+export const saveBookDemands = (data: BookDemand[]) => saveData<BookDemand>('bookDemands', data, (d) => { localBookDemands = d; });

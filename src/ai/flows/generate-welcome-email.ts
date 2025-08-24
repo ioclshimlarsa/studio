@@ -44,9 +44,9 @@ export async function generateWelcomeEmail(
   6. End with a friendly closing.
 
   User Details:
-  - Name: ${'{{name}}'}
-  - User ID: ${'{{userId}}'}
-  - Email: ${'{{email}}'}
+  - Name: {{name}}
+  - User ID: {{userId}}
+  - Email: {{email}}
   
   Generate the subject and an HTML body for the email.
 `,

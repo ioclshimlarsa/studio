@@ -51,10 +51,10 @@ export async function generatePersonalizedReminder(
   If the user has a history of on-time returns, use a friendly and appreciative tone.
   If the user has a history of late returns, use a slightly more firm but still polite tone.
 
-  User ID: ${'{{userId}}'}
-  Book Title: ${'{{bookTitle}}'}
-  Due Date: ${'{{dueDate}}'}
-  Borrowing History: ${'{{borrowingHistory}}'}
+  User ID: {{userId}}
+  Book Title: {{bookTitle}}
+  Due Date: {{dueDate}}
+  Borrowing History: {{borrowingHistory}}
 
   Compose a personalized reminder message that considers the above information.  The message should be brief (under 50 words).
   Start by greeting the user by their user ID.

@@ -13,10 +13,11 @@ import bookDemandsData from './data/bookDemands.json';
 let db: admin.firestore.Firestore | null = null;
 
 function initializeFirebase(): admin.firestore.Firestore | null {
+    // Only initialize firebase if it hasn't been already
     if (db) {
         return db;
     }
-    // Only initialize firebase if credentials are provided
+    // And if credentials are provided
     if (process.env.FIREBASE_PROJECT_ID) {
         try {
             const projectId = process.env.FIREBASE_PROJECT_ID;
@@ -119,12 +120,17 @@ async function saveData<T extends { id?: string; userId?: string }>(collectionNa
         return;
     }
     try {
-        const batch = firestore.batch();
         const collectionRef = firestore.collection(collectionName);
-        
         const snapshot = await collectionRef.get();
-        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+        
+        const batch = firestore.batch();
 
+        // Delete existing documents
+        snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        // Add new documents
         for (const item of data) {
             const docId = item.id || item.userId;
             if (!docId) {

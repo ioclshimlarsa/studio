@@ -3,7 +3,7 @@
 
 import { generatePersonalizedReminder } from '@/ai/flows/generate-personalized-reminder';
 import { z } from 'zod';
-import { getUsers, getBooks, getHistories, getBookDemands, saveUsers, saveBooks, saveHistories, saveBookDemands } from './data';
+import { getUsers, getBooks, getHistories, getBookDemands, saveUsers, saveBooks, saveHistories, saveBookDemands, appendBooks } from './data';
 import type { GeneratePersonalizedReminderInput } from '@/ai/flows/generate-personalized-reminder';
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
 import { read, utils } from 'xlsx';
@@ -203,13 +203,16 @@ export async function addBooksFromCSV(prevState: any, formData: FormData) {
             return { error: 'CSV file is empty or in an invalid format.' };
         }
         
-        const currentBooks = await getBooks();
+        // We get the count of current books to create unique IDs.
+        // This is not perfectly safe in a high-concurrency environment, but sufficient for this app.
+        const currentBookCount = (await getBooks()).length;
+
         const newBooks: Book[] = json.map((row, index) => {
              if (!row.title || !row.author || !row.language) {
                 throw new Error(`Row ${index + 2} is missing required fields (title, author, language).`);
             }
             return {
-                id: `B${String(currentBooks.length + index + 1).padStart(3, '0')}_${uuidv4().slice(0,4)}`,
+                id: `B${String(currentBookCount + index + 1).padStart(3, '0')}_${uuidv4().slice(0,4)}`,
                 title: row.title,
                 author: row.author,
                 language: row.language,
@@ -217,8 +220,7 @@ export async function addBooksFromCSV(prevState: any, formData: FormData) {
             };
         });
 
-        const updatedBooks = [...currentBooks, ...newBooks];
-        await saveBooks(updatedBooks);
+        await appendBooks(newBooks);
 
         return { success: true, message: `${newBooks.length} books added successfully from CSV.` };
 

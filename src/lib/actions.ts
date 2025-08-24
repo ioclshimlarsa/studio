@@ -2,7 +2,6 @@
 'use server';
 
 import { generatePersonalizedReminder } from '@/ai/flows/generate-personalized-reminder';
-import { generateWelcomeEmail } from '@/ai/flows/generate-welcome-email';
 import { z } from 'zod';
 import { getUsers, getBooks, getHistories, getBookDemands, saveUsers, saveBooks, saveHistories, saveBookDemands } from './data';
 import type { GeneratePersonalizedReminderInput } from '@/ai/flows/generate-personalized-reminder';
@@ -94,17 +93,6 @@ export async function createUser(prevState: any, formData: FormData) {
     };
     
     await saveUsers([...currentUsers, newUser]);
-    
-    // Only generate welcome email for regular users
-    if (newUser.role === 'user') {
-      try {
-          await generateWelcomeEmail({ name, email, userId });
-          console.log(`Welcome email generated for ${email}`);
-      } catch (error) {
-          console.error('Failed to generate welcome email:', error);
-          // Don't block user creation if email fails
-      }
-    }
     
     return { success: true, message: `User ${name} created successfully.` };
 }

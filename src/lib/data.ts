@@ -47,6 +47,7 @@ function getDb(): admin.firestore.Firestore {
 async function runInitialDataMigration() {
     const firestore = getDb();
     
+    // Check if all collections are empty before migrating
     const usersSnapshot = await firestore.collection('users').limit(1).get();
     const booksSnapshot = await firestore.collection('books').limit(1).get();
     const historiesSnapshot = await firestore.collection('histories').limit(1).get();
@@ -78,6 +79,8 @@ async function runInitialDataMigration() {
 
         await batch.commit();
         console.log('Initial data migration completed.');
+    } else {
+        console.log('One or more collections are not empty. Skipping initial data migration.');
     }
 }
 

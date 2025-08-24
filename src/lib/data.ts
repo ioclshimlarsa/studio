@@ -10,52 +10,49 @@ import bookDemandsData from './data/bookDemands.json';
 
 // --- Firebase Admin SDK Singleton ---
 
-let db: admin.firestore.Firestore;
-let migrationPromise: Promise<void> | null = null;
+let db: admin.firestore.Firestore | null = null;
 
-function getDb(): admin.firestore.Firestore {
+function initializeFirebase(): admin.firestore.Firestore | null {
   if (db) {
     return db;
   }
+  // Only initialize firebase if credentials are provided
+  if (process.env.FIREBASE_PROJECT_ID) {
+    try {
+      const projectId = process.env.FIREBASE_PROJECT_ID;
+      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-  try {
-    const projectId = process.env.FIREBASE_PROJECT_ID;
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-
-    if (!projectId || !clientEmail || !privateKey) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error('Firebase environment variables are not set.');
+      if (!projectId || !clientEmail || !privateKey) {
+        throw new Error('Firebase environment variables are not fully set.');
       }
-      console.warn('Firebase environment variables not set. Assuming local development.');
-    }
 
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId,
-          clientEmail,
-          privateKey,
-        }),
-      });
-      console.log('Firebase Admin SDK initialized successfully.');
+      if (!admin.apps.length) {
+        admin.initializeApp({
+          credential: admin.credential.cert({
+            projectId,
+            clientEmail,
+            privateKey,
+          }),
+        });
+        console.log('Firebase Admin SDK initialized successfully.');
+      }
+      db = admin.firestore();
+      return db;
+    } catch (error: any) {
+      console.error('Firebase admin initialization error', error);
+      // Do not throw here to allow fallback to JSON
+      return null;
     }
-    db = admin.firestore();
-    return db;
-  } catch (error: any) {
-    console.error('Firebase admin initialization error', error);
-    throw new Error(`Firebase Admin SDK initialization failed: ${error.message}`);
   }
+  // If no credentials, return null
+  return null;
 }
 
-// --- Initial Data Migration ---
-async function runInitialDataMigration() {
-    const firestore = getDb();
-    if (!firestore.collection) {
-        console.error("Firestore not available, skipping data migration.");
-        return;
-    }
+const firestore = initializeFirebase();
 
+async function runInitialDataMigration(firestore: admin.firestore.Firestore) {
+    if (!firestore) return;
     try {
         const usersCollection = firestore.collection('users');
         const usersSnapshot = await usersCollection.get();
@@ -85,46 +82,42 @@ async function runInitialDataMigration() {
         }
     } catch (error) {
         console.error('Error during initial data migration:', error);
-        // Do not re-throw, as this might crash the server on startup in some environments.
     }
 }
 
+// Run migration once on startup if using firebase
+if (firestore) {
+    runInitialDataMigration(firestore);
+}
 
-// --- Generic Firestore Functions ---
+// --- Generic Data Functions ---
 
-async function getData<T>(collectionName: string): Promise<T[]> {
-    if (!migrationPromise) {
-        migrationPromise = runInitialDataMigration();
+async function getData<T>(collectionName: string, fallbackData: T[]): Promise<T[]> {
+    if (!firestore) {
+        return Promise.resolve(fallbackData);
     }
-    await migrationPromise;
-    
     try {
-        const firestore = getDb();
-        if (!firestore.collection) {
-             console.error(`Firestore not available for getting data from ${collectionName}`);
-             return [];
-        }
         const snapshot = await firestore.collection(collectionName).get();
         if (snapshot.empty) {
-            return [];
+            return fallbackData; // Fallback to JSON if collection is empty in Firestore
         }
         return snapshot.docs.map(doc => doc.data() as T);
     } catch (error) {
-        console.error(`Error getting data from ${collectionName}:`, error);
-        return [];
+        console.error(`Error getting data from ${collectionName}, falling back to JSON:`, error);
+        return fallbackData; // Fallback on error
     }
 }
 
-async function saveData<T extends { id?: string; userId?: string }>(collectionName: string, data: T[]): Promise<void> {
-    const firestore = getDb();
-    if (!firestore.batch) {
-        console.error(`Firestore not available for saving data to ${collectionName}`);
-        throw new Error(`Firestore not available`);
+async function saveData<T extends { id?: string; userId?: string }>(collectionName: string, data: T[], fallbackFn: (data: T[]) => void): Promise<void> {
+    if (!firestore) {
+        fallbackFn(data); // In-memory update for JSON
+        return;
     }
     try {
         const batch = firestore.batch();
         const collectionRef = firestore.collection(collectionName);
         
+        // This is a simple "overwrite all" approach. A real app might be more nuanced.
         const snapshot = await collectionRef.get();
         snapshot.docs.forEach(doc => batch.delete(doc.ref));
 
@@ -145,17 +138,25 @@ async function saveData<T extends { id?: string; userId?: string }>(collectionNa
     }
 }
 
+
+// --- In-memory fallback state ---
+let localUsers: User[] = [...usersData];
+let localBooks: Book[] = [...booksData];
+let localHistories: UserBorrowingHistory[] = [...historiesData];
+let localBookDemands: BookDemand[] = [...bookDemandsData];
+
+
 // --- Public Data Access Functions ---
 
-export const getUsers = async (): Promise<User[]> => getData<User>('users');
-export const getBooks = async (): Promise<Book[]> => getData<Book>('books');
-export const getHistories = async (): Promise<UserBorrowingHistory[]> => getData<UserBorrowingHistory>('histories');
-export const getBookDemands = async (): Promise<BookDemand[]> => getData<BookDemand>('bookDemands');
+export const getUsers = async (): Promise<User[]> => getData<User>('users', localUsers);
+export const getBooks = async (): Promise<Book[]> => getData<Book>('books', localBooks);
+export const getHistories = async (): Promise<UserBorrowingHistory[]> => getData<UserBorrowingHistory>('histories', localHistories);
+export const getBookDemands = async (): Promise<BookDemand[]> => getData<BookDemand>('bookDemands', localBookDemands);
 
 
 // --- Public Data Saving Functions ---
 
-export const saveUsers = async (data: User[]) => saveData<User>('users', data);
-export const saveBooks = async (data: Book[]) => saveData<Book>('books', data);
-export const saveHistories = async (data: UserBorrowingHistory[]) => saveData<UserBorrowingHistory>('histories', data);
-export const saveBookDemands = async (data: BookDemand[]) => saveData<BookDemand>('bookDemands', data);
+export const saveUsers = async (data: User[]) => saveData<User>('users', data, (d) => { localUsers = d; });
+export const saveBooks = async (data: Book[]) => saveData<Book>('books', data, (d) => { localBooks = d; });
+export const saveHistories = async (data: UserBorrowingHistory[]) => saveData<UserBorrowingHistory>('histories', data, (d) => { localHistories = d; });
+export const saveBookDemands = async (data: BookDemand[]) => saveData<BookDemand>('bookDemands', data, (d) => { localBookDemands = d; });

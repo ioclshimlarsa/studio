@@ -1,6 +1,4 @@
 
-'use server';
-
 import admin from 'firebase-admin';
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
 import usersData from './data/users.json';
@@ -24,7 +22,10 @@ function initializeFirebase(): admin.firestore.Firestore | null {
       const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
       if (!projectId || !clientEmail || !privateKey) {
-        throw new Error('Firebase environment variables are not fully set.');
+        // Gracefully return null if credentials are not fully set
+        // This allows the app to run in a local environment without firebase
+        console.log('Firebase environment variables are not fully set. Falling back to JSON data.');
+        return null;
       }
 
       if (!admin.apps.length) {
@@ -40,12 +41,13 @@ function initializeFirebase(): admin.firestore.Firestore | null {
       db = admin.firestore();
       return db;
     } catch (error: any) {
-      console.error('Firebase admin initialization error', error);
+      console.error('Firebase admin initialization error, falling back to JSON data:', error.message);
       // Do not throw here to allow fallback to JSON
       return null;
     }
   }
   // If no credentials, return null
+  console.log('Firebase environment variables not found. Using JSON data as a fallback.');
   return null;
 }
 
@@ -98,8 +100,16 @@ async function getData<T>(collectionName: string, fallbackData: T[]): Promise<T[
     }
     try {
         const snapshot = await firestore.collection(collectionName).get();
+        // NOTE: Firestore doesn't return data if the collection was created but is empty.
+        // We will only fallback to local data if the database connection itself failed.
+        // A truly empty collection should return an empty array.
         if (snapshot.empty) {
-            return fallbackData; // Fallback to JSON if collection is empty in Firestore
+            // Check if the fallback data should be used instead
+            const metadataDoc = await firestore.collection('internal_metadata').doc('data_state').get();
+            if (!metadataDoc.exists) {
+                 // This indicates that data has never been successfully written, so we can use fallback.
+                 return fallbackData;
+            }
         }
         return snapshot.docs.map(doc => doc.data() as T);
     } catch (error) {
@@ -107,6 +117,7 @@ async function getData<T>(collectionName: string, fallbackData: T[]): Promise<T[
         return fallbackData; // Fallback on error
     }
 }
+
 
 async function saveData<T extends { id?: string; userId?: string }>(collectionName: string, data: T[], fallbackFn: (data: T[]) => void): Promise<void> {
     if (!firestore) {
@@ -117,7 +128,6 @@ async function saveData<T extends { id?: string; userId?: string }>(collectionNa
         const batch = firestore.batch();
         const collectionRef = firestore.collection(collectionName);
         
-        // This is a simple "overwrite all" approach. A real app might be more nuanced.
         const snapshot = await collectionRef.get();
         snapshot.docs.forEach(doc => batch.delete(doc.ref));
 
@@ -130,6 +140,10 @@ async function saveData<T extends { id?: string; userId?: string }>(collectionNa
             const docRef = collectionRef.doc(docId);
             batch.set(docRef, item);
         }
+        
+        // Mark that data has been written
+        const metadataRef = firestore.collection('internal_metadata').doc('data_state');
+        batch.set(metadataRef, { lastUpdated: new Date().toISOString() });
         
         await batch.commit();
     } catch (error) {

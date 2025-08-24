@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -43,7 +42,7 @@ export async function generatePersonalizedReminder(
     name: 'generatePersonalizedReminderPrompt',
     input: {schema: GeneratePersonalizedReminderInputSchema},
     output: {schema: GeneratePersonalizedReminderOutputSchema},
-    system: `You are an AI assistant tasked with generating personalized reminder messages for users with overdue books.
+    prompt: `You are an AI assistant tasked with generating personalized reminder messages for users with overdue books.
 
   The goal is to generate a gentle and effective reminder message that encourages the user to return the book promptly.
   Leverage the user's past borrowing history to tailor the tone and format of the message.

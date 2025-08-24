@@ -3,7 +3,7 @@
 
 import { generatePersonalizedReminder } from '@/ai/flows/generate-personalized-reminder';
 import { z } from 'zod';
-import { getUsers, getBooks, getHistories, getBookDemands, saveUsers, saveBooks, saveHistories, saveBookDemands } from './data';
+import { getUsers, getBooks, getHistories, getBookDemands, saveUsers, saveBooks, saveHistories, saveBookDemands, getUser, setUser } from './data';
 import type { GeneratePersonalizedReminderInput } from '@/ai/flows/generate-personalized-reminder';
 import type { User, Book, UserBorrowingHistory, BookDemand } from './types';
 import { read, utils } from 'xlsx';
@@ -16,6 +16,25 @@ const loginSchema = z.object({
   role: z.enum(['user', 'admin']),
 });
 
+async function ensureAdminUserExists() {
+    const adminId = 'admin01';
+    const adminUser = await getUser(adminId);
+    if (!adminUser) {
+        console.log(`Admin user '${adminId}' not found. Creating...`);
+        const newAdmin: User = {
+            id: adminId,
+            name: 'Admin',
+            email: 'admin@library.com',
+            role: 'admin',
+            password: 'password', // Default password
+            status: 'active',
+        };
+        await setUser(newAdmin);
+        console.log(`Admin user '${adminId}' created successfully.`);
+    }
+}
+
+
 export async function login(prevState: any, formData: FormData) {
   const validatedFields = loginSchema.safeParse(Object.fromEntries(formData.entries()));
 
@@ -26,6 +45,12 @@ export async function login(prevState: any, formData: FormData) {
   }
   
   const { userId, password, role } = validatedFields.data;
+
+  // Special handling for admin user to ensure it always exists.
+  if (userId === 'admin01' && role === 'admin') {
+      await ensureAdminUserExists();
+  }
+
   const allUsers = await getUsers();
   const user = allUsers.find((u) => u.id === userId && u.role === role && u.password === password);
 

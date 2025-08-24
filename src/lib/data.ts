@@ -23,7 +23,13 @@ function getDb(): admin.firestore.Firestore {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
     if (!projectId || !clientEmail || !privateKey) {
-        throw new Error('Firebase environment variables are not set. Cannot initialize Firebase Admin SDK.');
+        // In a deployed environment, we expect these to be set.
+        // In a local environment, the emulator is used.
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error('Firebase environment variables are not set. Cannot initialize Firebase Admin SDK.');
+        }
+        // For local dev, we can proceed assuming emulator is running or no firebase access is needed immediately.
+        console.warn('Firebase environment variables not set. Assuming local development with emulator or delayed initialization.');
     }
 
     if (!admin.apps.length) {
@@ -40,48 +46,12 @@ function getDb(): admin.firestore.Firestore {
     return db;
   } catch (error: any) {
      console.error('Firebase admin initialization error', error);
-     throw new Error(`Firebase Admin SDK initialization failed: ${error.message}`);
+     // Avoid throwing hard error on startup, let calls fail instead.
+     // This prevents Vercel from crashing on boot if env vars are missing.
   }
-}
-
-async function runInitialDataMigration() {
-    const firestore = getDb();
-    
-    // Check if all collections are empty before migrating
-    const usersSnapshot = await firestore.collection('users').limit(1).get();
-    const booksSnapshot = await firestore.collection('books').limit(1).get();
-    const historiesSnapshot = await firestore.collection('histories').limit(1).get();
-    const bookDemandsSnapshot = await firestore.collection('bookDemands').limit(1).get();
-
-    if (usersSnapshot.empty && booksSnapshot.empty && historiesSnapshot.empty && bookDemandsSnapshot.empty) {
-        console.log('All collections are empty. Running initial data migration...');
-        const batch = firestore.batch();
-
-        usersData.forEach((user: User) => {
-            const docRef = firestore.collection('users').doc(user.id);
-            batch.set(docRef, user);
-        });
-
-        booksData.forEach((book: Book) => {
-            const docRef = firestore.collection('books').doc(book.id);
-            batch.set(docRef, book);
-        });
-        
-        historiesData.forEach((history: UserBorrowingHistory) => {
-            const docRef = firestore.collection('histories').doc(history.userId);
-            batch.set(docRef, history);
-        });
-        
-        bookDemandsData.forEach((demand: BookDemand) => {
-            const docRef = firestore.collection('bookDemands').doc(demand.id);
-            batch.set(docRef, demand);
-        });
-
-        await batch.commit();
-        console.log('Initial data migration completed.');
-    } else {
-        console.log('One or more collections are not empty. Skipping initial data migration.');
-    }
+  // Return a dummy object if initialization fails to prevent crashes on import
+  // Functions calling getDb must handle the possibility of a non-functional db object.
+  return {} as admin.firestore.Firestore;
 }
 
 
@@ -89,8 +59,11 @@ async function runInitialDataMigration() {
 
 async function getData<T>(collectionName: string): Promise<T[]> {
     try {
-        await runInitialDataMigration();
         const firestore = getDb();
+        if (!firestore.collection) {
+             console.error(`Firestore not available for getting data from ${collectionName}`);
+             return [];
+        }
         const snapshot = await firestore.collection(collectionName).get();
         if (snapshot.empty) {
             return [];
@@ -104,6 +77,10 @@ async function getData<T>(collectionName: string): Promise<T[]> {
 
 async function saveData<T extends { id?: string; userId?: string }>(collectionName: string, data: T[]): Promise<void> {
     const firestore = getDb();
+    if (!firestore.batch) {
+        console.error(`Firestore not available for saving data to ${collectionName}`);
+        throw new Error(`Firestore not available`);
+    }
     try {
         const batch = firestore.batch();
         const collectionRef = firestore.collection(collectionName);
@@ -128,6 +105,39 @@ async function saveData<T extends { id?: string; userId?: string }>(collectionNa
     }
 }
 
+async function getDoc<T>(collectionName: string, docId: string): Promise<T | null> {
+    try {
+        const firestore = getDb();
+         if (!firestore.collection) {
+             console.error(`Firestore not available for getting doc from ${collectionName}`);
+             return null;
+        }
+        const docRef = firestore.collection(collectionName).doc(docId);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+            return docSnap.data() as T;
+        }
+        return null;
+    } catch (error) {
+        console.error(`Error getting document ${docId} from ${collectionName}:`, error);
+        return null;
+    }
+}
+
+async function setDoc<T>(collectionName: string, docId: string, data: T): Promise<void> {
+     const firestore = getDb();
+     if (!firestore.collection) {
+        console.error(`Firestore not available for setting doc in ${collectionName}`);
+        throw new Error('Firestore not available');
+    }
+    try {
+        await firestore.collection(collectionName).doc(docId).set(data);
+    } catch (error) {
+        console.error(`Error setting document ${docId} in ${collectionName}:`, error);
+        throw new Error(`Failed to set document in ${collectionName}.`);
+    }
+}
+
 
 // --- Public Data Access Functions ---
 
@@ -135,6 +145,8 @@ export const getUsers = async (): Promise<User[]> => getData<User>('users');
 export const getBooks = async (): Promise<Book[]> => getData<Book>('books');
 export const getHistories = async (): Promise<UserBorrowingHistory[]> => getData<UserBorrowingHistory>('histories');
 export const getBookDemands = async (): Promise<BookDemand[]> => getData<BookDemand>('bookDemands');
+export const getUser = async (userId: string): Promise<User | null> => getDoc<User>('users', userId);
+export const setUser = async (user: User) => setDoc<User>('users', user.id, user);
 
 
 // --- Public Data Saving Functions ---

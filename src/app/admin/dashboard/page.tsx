@@ -9,12 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, BookCheck, BookUp, Check, Library, PlusCircle, Upload, X, Hand, LogOut, Users, UserPlus, ShieldOff, KeyRound, CheckCircle, CircleSlash, Ban, Trash2, FileDown, History, BookMarked, Languages, Type, Building, DollarSign } from 'lucide-react';
+import { Bell, BookUp, Check, Library, PlusCircle, X, Hand, LogOut, Users, CheckCircle, CircleSlash, Ban, Trash2, FileDown, History, BookMarked, Languages } from 'lucide-react';
 import { ReminderDialog } from '@/components/admin/reminder-dialog';
 import { ResetPasswordDialog } from '@/components/admin/reset-password-dialog';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { CreateUserForm } from '@/components/admin/create-user-form';
 import { CreateBookForm } from '@/components/admin/create-book-form';
 import { BulkUploadForm } from '@/components/admin/bulk-upload-form';
@@ -38,7 +37,6 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [selectedHistoryUserId, setSelectedHistoryUserId] = useState<string | null>(null);
   const [languageFilter, setLanguageFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -66,15 +64,10 @@ export default function AdminDashboard() {
   );
   
   const uniqueLanguages = ['all', ...Array.from(new Set(allBooks.map(book => book.language)))];
-  const uniqueTypes = ['all', ...Array.from(new Set(allBooks.map(book => book.type).filter(Boolean)))];
 
   const filteredBooksByLanguage = languageFilter === 'all' 
     ? allBooks 
     : allBooks.filter(book => book.language === languageFilter);
-
-  const filteredBooksByType = typeFilter === 'all' 
-    ? allBooks 
-    : allBooks.filter(book => book.type === typeFilter);
 
   const handleSendReminder = (book: Book) => {
     setSelectedBook(book);
@@ -197,7 +190,7 @@ export default function AdminDashboard() {
       
       <main>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-6 lg:grid-cols-11 max-w-7xl mx-auto h-auto">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-5 lg:grid-cols-9 max-w-7xl mx-auto h-auto">
             <TabsTrigger value="requests">
               <BookUp className="mr-2 h-4 w-4" /> Requests <Badge variant="destructive" className="ml-2">{bookRequests.length}</Badge>
             </TabsTrigger>
@@ -215,9 +208,6 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="filter_by_language">
                 <Languages className="mr-2 h-4 w-4" /> Filter by Language
-            </TabsTrigger>
-            <TabsTrigger value="filter_by_type">
-                <Type className="mr-2 h-4 w-4" /> Filter by Type
             </TabsTrigger>
             <TabsTrigger value="add_books">
               <PlusCircle className="mr-2 h-4 w-4" /> Add Books
@@ -414,9 +404,7 @@ export default function AdminDashboard() {
                     <TableRow>
                       <TableHead>Title</TableHead>
                       <TableHead>Author</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Publication</TableHead>
-                      <TableHead>Price</TableHead>
+                      <TableHead>Language</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Issued To</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -427,9 +415,7 @@ export default function AdminDashboard() {
                       <TableRow key={book.id}>
                         <TableCell className="font-medium">{book.title}</TableCell>
                         <TableCell>{book.author}</TableCell>
-                        <TableCell>{book.type}</TableCell>
-                        <TableCell>{book.publication}</TableCell>
-                        <TableCell>{book.price ? `$${book.price.toFixed(2)}` : 'N/A'}</TableCell>
+                        <TableCell>{book.language}</TableCell>
                         <TableCell>
                           <Badge variant={book.status === 'Available' ? 'secondary' : book.status === 'Issued' ? 'default' : 'outline' } className="capitalize">
                             {book.status}
@@ -505,61 +491,6 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
           
-          <TabsContent value="filter_by_type">
-            <Card>
-              <CardHeader>
-                <CardTitle>Filter by Type</CardTitle>
-                <CardDescription>Select a type to view all available books.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="max-w-xs">
-                  <Label htmlFor="type-select">Select Type</Label>
-                  <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger id="type-select">
-                      <SelectValue placeholder="Select a type..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {uniqueTypes.map(type => (
-                        <SelectItem key={type} value={type}>
-                          {type === 'all' ? 'All Types' : type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Author</TableHead>
-                      <TableHead>Language</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredBooksByType.length > 0 ? (
-                      filteredBooksByType.map(book => (
-                        <TableRow key={book.id}>
-                          <TableCell className="font-medium">{book.title}</TableCell>
-                          <TableCell>{book.author}</TableCell>
-                           <TableCell>{book.language}</TableCell>
-                          <TableCell>
-                            <Badge variant={book.status === 'Available' ? 'secondary' : book.status === 'Issued' ? 'default' : 'outline'} className="capitalize">
-                              {book.status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center">No books found for this type.</TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="add_books">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -614,7 +545,7 @@ export default function AdminDashboard() {
                               {(user.status === 'inactive' || user.status === 'blocked') && (
                                 <Button size="sm" variant="outline" onClick={() => handleStatusChange(user.id, 'active')}><CheckCircle className="mr-1 h-3 w-3" /> Activate</Button>
                               )}
-                              <Button size="sm" variant="secondary" onClick={() => handleOpenResetPassword(user)}><KeyRound className="mr-1 h-3 w-3" /> Reset Pass</Button>
+                              <Button size="sm" variant="secondary" onClick={() => handleOpenResetPassword(user)}>Reset Pass</Button>
                             </TableCell>
                           </TableRow>
                         ))}

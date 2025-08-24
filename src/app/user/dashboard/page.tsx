@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Book as BookIcon, BookCheck, History, Library, User as UserIcon, Hand, PlusCircle, LogOut, AlertTriangle, Languages, Type } from 'lucide-react';
+import { Book as BookIcon, BookCheck, History, Library, Hand, PlusCircle, LogOut, AlertTriangle, Languages } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -35,7 +35,6 @@ export default function UserDashboard() {
     const [myBooks, setMyBooks] = useState<Book[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [languageFilter, setLanguageFilter] = useState<string>('all');
-    const [typeFilter, setTypeFilter] = useState<string>('all');
 
     const forceRerender = useCallback(async () => {
         setIsLoading(true);
@@ -102,15 +101,10 @@ export default function UserDashboard() {
     );
 
     const uniqueLanguages = ['all', ...Array.from(new Set(allBooks.map(book => book.language)))];
-    const uniqueTypes = ['all', ...Array.from(new Set(allBooks.map(book => book.type).filter(Boolean)))];
 
     const filteredBooksByLanguage = languageFilter === 'all' 
         ? allBooks 
         : allBooks.filter(book => book.language === languageFilter);
-        
-    const filteredBooksByType = typeFilter === 'all' 
-        ? allBooks 
-        : allBooks.filter(book => book.type === typeFilter);
 
     if (isLoading) {
         return (
@@ -183,7 +177,7 @@ export default function UserDashboard() {
 
             <main>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 max-w-3xl mx-auto h-auto">
+                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 max-w-3xl mx-auto h-auto">
                         <TabsTrigger value="my_books">
                             <BookCheck className="mr-2 h-4 w-4" /> My Books
                         </TabsTrigger>
@@ -192,9 +186,6 @@ export default function UserDashboard() {
                         </TabsTrigger>
                          <TabsTrigger value="filter_by_language">
                             <Languages className="mr-2 h-4 w-4" /> Filter by Language
-                        </TabsTrigger>
-                        <TabsTrigger value="filter_by_type">
-                            <Type className="mr-2 h-4 w-4" /> Filter by Type
                         </TabsTrigger>
                         <TabsTrigger value="history">
                             <History className="mr-2 h-4 w-4" /> History
@@ -258,9 +249,6 @@ export default function UserDashboard() {
                                             <TableHead>Title</TableHead>
                                             <TableHead>Author</TableHead>
                                             <TableHead>Language</TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Publication</TableHead>
-                                            <TableHead>Price</TableHead>
                                             <TableHead className="text-right">Action</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -270,9 +258,6 @@ export default function UserDashboard() {
                                                 <TableCell className="font-medium">{book.title}</TableCell>
                                                 <TableCell>{book.author}</TableCell>
                                                 <TableCell>{book.language}</TableCell>
-                                                <TableCell>{book.type}</TableCell>
-                                                <TableCell>{book.publication}</TableCell>
-                                                <TableCell>{book.price ? `$${book.price.toFixed(2)}` : 'N/A'}</TableCell>
                                                 <TableCell className="text-right">
                                                     {book.status === 'Available' ? (
                                                         <Button size="sm" onClick={() => handleRequestBook(book.id)}>Request</Button>
@@ -342,68 +327,6 @@ export default function UserDashboard() {
                                     ) : (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center">No books found for this language.</TableCell>
-                                    </TableRow>
-                                    )}
-                                </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="filter_by_type">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Filter by Type</CardTitle>
-                                <CardDescription>Select a book type to view books and request them.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="max-w-xs">
-                                <Label htmlFor="type-select-user">Select Type</Label>
-                                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                    <SelectTrigger id="type-select-user">
-                                    <SelectValue placeholder="Select a type..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                    {uniqueTypes.map(type => (
-                                        <SelectItem key={type} value={type}>
-                                        {type === 'all' ? 'All Types' : type}
-                                        </SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                </div>
-                                <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                    <TableHead>Title</TableHead>
-                                    <TableHead>Author</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Action</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredBooksByType.length > 0 ? (
-                                    filteredBooksByType.map(book => (
-                                        <TableRow key={book.id} className={book.status !== 'Available' ? 'text-muted-foreground' : ''}>
-                                        <TableCell className="font-medium">{book.title}</TableCell>
-                                        <TableCell>{book.author}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={book.status === 'Available' ? 'secondary' : book.status === 'Issued' ? 'default' : 'outline'} className="capitalize">
-                                                {book.status === 'Requested' && book.issuedTo === user.id ? 'Requested by you' : book.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {book.status === 'Available' ? (
-                                            <Button size="sm" onClick={() => handleRequestBook(book.id)}>Request</Button>
-                                            ) : (
-                                            <span className="text-sm italic">Unavailable</span>
-                                            )}
-                                        </TableCell>
-                                        </TableRow>
-                                    ))
-                                    ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="text-center">No books found for this type.</TableCell>
                                     </TableRow>
                                     )}
                                 </TableBody>

@@ -58,7 +58,6 @@
   "devDependencies": {
     "@genkit-ai/firebase": "^1.14.1",
     "@opentelemetry/exporter-jaeger": "^1.26.0",
-    "@opentelemetry/winston-transport": "^0.8.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

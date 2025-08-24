@@ -11,6 +11,7 @@ import bookDemandsData from './data/bookDemands.json';
 // --- Firebase Admin SDK Singleton ---
 
 let db: admin.firestore.Firestore;
+let migrationPromise: Promise<void> | null = null;
 
 function getDb(): admin.firestore.Firestore {
   if (db) {
@@ -23,13 +24,10 @@ function getDb(): admin.firestore.Firestore {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
     if (!projectId || !clientEmail || !privateKey) {
-        // In a deployed environment, we expect these to be set.
-        // In a local environment, the emulator is used.
-        if (process.env.NODE_ENV === 'production') {
-            throw new Error('Firebase environment variables are not set. Cannot initialize Firebase Admin SDK.');
-        }
-        // For local dev, we can proceed assuming emulator is running or no firebase access is needed immediately.
-        console.warn('Firebase environment variables not set. Assuming local development with emulator or delayed initialization.');
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('Firebase environment variables are not set.');
+      }
+      console.warn('Firebase environment variables not set. Assuming local development.');
     }
 
     if (!admin.apps.length) {
@@ -40,24 +38,66 @@ function getDb(): admin.firestore.Firestore {
           privateKey,
         }),
       });
-       console.log('Firebase Admin SDK initialized successfully.');
+      console.log('Firebase Admin SDK initialized successfully.');
     }
     db = admin.firestore();
     return db;
   } catch (error: any) {
-     console.error('Firebase admin initialization error', error);
-     // Avoid throwing hard error on startup, let calls fail instead.
-     // This prevents Vercel from crashing on boot if env vars are missing.
+    console.error('Firebase admin initialization error', error);
+    throw new Error(`Firebase Admin SDK initialization failed: ${error.message}`);
   }
-  // Return a dummy object if initialization fails to prevent crashes on import
-  // Functions calling getDb must handle the possibility of a non-functional db object.
-  return {} as admin.firestore.Firestore;
+}
+
+// --- Initial Data Migration ---
+async function runInitialDataMigration() {
+    const firestore = getDb();
+    if (!firestore.collection) {
+        console.error("Firestore not available, skipping data migration.");
+        return;
+    }
+
+    try {
+        const usersCollection = firestore.collection('users');
+        const usersSnapshot = await usersCollection.get();
+        if (usersSnapshot.empty) {
+            console.log('Users collection is empty. Populating with initial data...');
+            const batch = firestore.batch();
+
+            (usersData as User[]).forEach(user => {
+                const docRef = firestore.collection('users').doc(user.id);
+                batch.set(docRef, user);
+            });
+            (booksData as Book[]).forEach(book => {
+                const docRef = firestore.collection('books').doc(book.id);
+                batch.set(docRef, book);
+            });
+            (historiesData as UserBorrowingHistory[]).forEach(history => {
+                const docRef = firestore.collection('histories').doc(history.userId);
+                batch.set(docRef, history);
+            });
+            (bookDemandsData as BookDemand[]).forEach(demand => {
+                const docRef = firestore.collection('bookDemands').doc(demand.id);
+                batch.set(docRef, demand);
+            });
+
+            await batch.commit();
+            console.log('Initial data migration completed successfully.');
+        }
+    } catch (error) {
+        console.error('Error during initial data migration:', error);
+        // Do not re-throw, as this might crash the server on startup in some environments.
+    }
 }
 
 
 // --- Generic Firestore Functions ---
 
 async function getData<T>(collectionName: string): Promise<T[]> {
+    if (!migrationPromise) {
+        migrationPromise = runInitialDataMigration();
+    }
+    await migrationPromise;
+    
     try {
         const firestore = getDb();
         if (!firestore.collection) {
@@ -105,48 +145,12 @@ async function saveData<T extends { id?: string; userId?: string }>(collectionNa
     }
 }
 
-async function getDoc<T>(collectionName: string, docId: string): Promise<T | null> {
-    try {
-        const firestore = getDb();
-         if (!firestore.collection) {
-             console.error(`Firestore not available for getting doc from ${collectionName}`);
-             return null;
-        }
-        const docRef = firestore.collection(collectionName).doc(docId);
-        const docSnap = await docRef.get();
-        if (docSnap.exists) {
-            return docSnap.data() as T;
-        }
-        return null;
-    } catch (error) {
-        console.error(`Error getting document ${docId} from ${collectionName}:`, error);
-        return null;
-    }
-}
-
-async function setDoc<T>(collectionName: string, docId: string, data: T): Promise<void> {
-     const firestore = getDb();
-     if (!firestore.collection) {
-        console.error(`Firestore not available for setting doc in ${collectionName}`);
-        throw new Error('Firestore not available');
-    }
-    try {
-        await firestore.collection(collectionName).doc(docId).set(data);
-    } catch (error) {
-        console.error(`Error setting document ${docId} in ${collectionName}:`, error);
-        throw new Error(`Failed to set document in ${collectionName}.`);
-    }
-}
-
-
 // --- Public Data Access Functions ---
 
 export const getUsers = async (): Promise<User[]> => getData<User>('users');
 export const getBooks = async (): Promise<Book[]> => getData<Book>('books');
 export const getHistories = async (): Promise<UserBorrowingHistory[]> => getData<UserBorrowingHistory>('histories');
 export const getBookDemands = async (): Promise<BookDemand[]> => getData<BookDemand>('bookDemands');
-export const getUser = async (userId: string): Promise<User | null> => getDoc<User>('users', userId);
-export const setUser = async (user: User) => setDoc<User>('users', user.id, user);
 
 
 // --- Public Data Saving Functions ---

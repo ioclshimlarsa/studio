@@ -170,18 +170,16 @@ export async function addBook(prevState: any, formData: FormData) {
     }
     
     const { title, author, language } = validatedFields.data;
-    const currentBooks = await getBooks();
     
     const newBook: Book = {
-        id: `B${String(currentBooks.length + 1).padStart(3, '0')}_${uuidv4().slice(0,4)}`,
+        id: uuidv4(),
         title,
         author,
         language,
         status: 'Available',
     };
 
-    const updatedBooks = [...currentBooks, newBook];
-    await saveBooks(updatedBooks);
+    await appendBooks([newBook]);
 
     return { success: true, message: `Book "${title}" added successfully.` };
 }
@@ -202,15 +200,13 @@ export async function addBooksFromCSV(prevState: any, formData: FormData) {
         if (json.length === 0) {
             return { error: 'CSV file is empty or in an invalid format.' };
         }
-        
-        const currentBookCount = (await getBooks()).length;
 
         const newBooks: Book[] = json.map((row, index) => {
              if (!row.title || !row.author || !row.language) {
                 throw new Error(`Row ${index + 2} is missing required fields (title, author, language).`);
             }
             return {
-                id: `B${String(currentBookCount + index + 1).padStart(3, '0')}_${uuidv4().slice(0,4)}`,
+                id: uuidv4(),
                 title: row.title,
                 author: row.author,
                 language: row.language,
@@ -404,3 +400,5 @@ export async function getUserDashboardData(userId: string) {
         myBooks: allBooks.filter(book => book.issuedTo === userId),
     };
 }
+
+    

@@ -13,50 +13,65 @@ import bookDemandsData from './data/bookDemands.json';
 let db: admin.firestore.Firestore | null = null;
 
 function initializeFirebase(): admin.firestore.Firestore | null {
-    if (admin.apps.length) {
-        if (!db) {
-           db = admin.firestore();
-        }
+    if (db) {
         return db;
     }
     
+    // Check if running on the server and if env vars are present
     if (process.env.FIREBASE_PROJECT_ID) {
-        try {
-            const projectId = process.env.FIREBASE_PROJECT_ID;
-            const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-            const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+        // Prevent re-initialization
+        if (!admin.apps.length) {
+            try {
+                const projectId = process.env.FIREBASE_PROJECT_ID;
+                const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+                const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-            if (!projectId || !clientEmail || !privateKey) {
-                console.log('Firebase environment variables are not fully set. Falling back to JSON data.');
+                if (!projectId || !clientEmail || !privateKey) {
+                    console.log('Firebase environment variables are not fully set. Falling back to JSON data.');
+                    return null;
+                }
+
+                admin.initializeApp({
+                    credential: admin.credential.cert({
+                        projectId,
+                        clientEmail,
+                        privateKey,
+                    }),
+                });
+                console.log('Firebase Admin SDK initialized successfully.');
+            } catch (error: any) {
+                console.error('Firebase admin initialization error, falling back to JSON data:', error.message);
                 return null;
             }
-
-            admin.initializeApp({
-                credential: admin.credential.cert({
-                    projectId,
-                    clientEmail,
-                    privateKey,
-                }),
-            });
-            console.log('Firebase Admin SDK initialized successfully.');
-            db = admin.firestore();
-            return db;
-        } catch (error: any) {
-            console.error('Firebase admin initialization error, falling back to JSON data:', error.message);
-            return null;
         }
+        db = admin.firestore();
+
+        // Run data migration if needed, but don't block the return
+        runInitialDataMigration(db).catch(error => {
+            console.error('Error during initial data migration check:', error);
+        });
+
+        return db;
     }
+
     console.log('Firebase environment variables not found. Using JSON data as a fallback.');
     return null;
 }
 
+// --- In-memory fallback state ---
+let localUsers: User[] = [...usersData];
+let localBooks: Book[] = [...booksData];
+let localHistories: UserBorrowingHistory[] = [...historiesData];
+let localBookDemands: BookDemand[] = [...bookDemandsData];
+
+
 // Initialize Firebase once when the module is loaded
 const firestore = initializeFirebase();
+
 
 async function runInitialDataMigration(fs: admin.firestore.Firestore) {
     if (!fs) return;
     try {
-        // Check a single collection to see if migration is needed.
         const usersCollection = fs.collection('users');
         const usersSnapshot = await usersCollection.limit(1).get();
         if (usersSnapshot.empty) {
@@ -88,11 +103,6 @@ async function runInitialDataMigration(fs: admin.firestore.Firestore) {
     }
 }
 
-// Run migration once on startup if using firebase
-if (firestore) {
-    runInitialDataMigration(firestore);
-}
-
 // --- Generic Data Functions ---
 
 async function getData<T>(collectionName: string, fallbackData: T[]): Promise<T[]> {
@@ -102,34 +112,35 @@ async function getData<T>(collectionName: string, fallbackData: T[]): Promise<T[
     try {
         const snapshot = await firestore.collection(collectionName).get();
         if (snapshot.empty) {
-            // If the collection is empty in Firestore, it might be the first run.
-            // Let's return the local JSON data. The migration will handle population.
             return fallbackData;
         }
         return snapshot.docs.map(doc => doc.data() as T);
     } catch (error) {
         console.error(`Error getting data from ${collectionName}, falling back to JSON:`, error);
-        return fallbackData; // Fallback on error
+        return fallbackData;
     }
 }
 
 // Overwrites an entire collection. Use with caution.
-async function saveData<T extends { id?: string; userId?: string }>(collectionName: string, data: T[], fallbackFn: (data: T[]) => void): Promise<void> {
+async function saveData<T extends { id?: string; userId?: string }>(collectionName: string, data: T[]): Promise<void> {
     if (!firestore) {
-        fallbackFn(data); // In-memory update for JSON
+        if (collectionName === 'users') localUsers = data as User[];
+        if (collectionName === 'books') localBooks = data as Book[];
+        if (collectionName === 'histories') localHistories = data as UserBorrowingHistory[];
+        if (collectionName === 'bookDemands') localBookDemands = data as BookDemand[];
         return;
     }
     try {
         const batch = firestore.batch();
         const collectionRef = firestore.collection(collectionName);
         
-        // To overwrite, we first delete all existing documents.
         const snapshot = await collectionRef.get();
-        snapshot.docs.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        
-        // Then we add all the new documents.
+        if(!snapshot.empty){
+             snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+        }
+       
         for (const item of data) {
             const docId = item.id || item.userId;
             if (!docId) {
@@ -147,10 +158,15 @@ async function saveData<T extends { id?: string; userId?: string }>(collectionNa
     }
 }
 
+
 // Appends items to a collection without deleting existing ones.
-async function appendData<T extends { id: string }>(collectionName: string, newData: T[], fallbackFn: (data: T[]) => void): Promise<void> {
+async function appendData<T extends { id: string }>(collectionName: string, newData: T[]): Promise<void> {
     if (!firestore) {
-        fallbackFn(newData); // In-memory update for JSON
+         if (collectionName === 'books') {
+            const bookIds = new Set(localBooks.map(b => b.id));
+            const uniqueNewBooks = newData.filter(b => !bookIds.has(b.id as string));
+            localBooks.push(...(uniqueNewBooks as Book[]));
+        }
         return;
     }
     try {
@@ -159,7 +175,7 @@ async function appendData<T extends { id: string }>(collectionName: string, newD
         
         newData.forEach(item => {
             const docRef = collectionRef.doc(item.id);
-            batch.set(docRef, item);
+            batch.set(docRef, item, { merge: true });
         });
         
         await batch.commit();
@@ -168,13 +184,6 @@ async function appendData<T extends { id: string }>(collectionName: string, newD
         throw new Error(`Failed to append data to ${collectionName}.`);
     }
 }
-
-
-// --- In-memory fallback state ---
-let localUsers: User[] = [...usersData];
-let localBooks: Book[] = [...booksData];
-let localHistories: UserBorrowingHistory[] = [...historiesData];
-let localBookDemands: BookDemand[] = [...bookDemandsData];
 
 
 // --- Public Data Access Functions ---
@@ -187,16 +196,8 @@ export const getBookDemands = async (): Promise<BookDemand[]> => getData<BookDem
 
 // --- Public Data Saving Functions ---
 
-// Note: save functions overwrite collections.
-export const saveUsers = async (data: User[]) => saveData<User>('users', data, (d) => { localUsers = d; });
-export const saveBooks = async (data: Book[]) => saveData<Book>('books', data, (d) => { localBooks = d; });
-export const saveHistories = async (data: UserBorrowingHistory[]) => saveData<UserBorrowingHistory>('histories', data, (d) => { localHistories = d; });
-export const saveBookDemands = async (data: BookDemand[]) => saveData<BookDemand>('bookDemands', data, (d) => { localBookDemands = d; });
-
-// Function to append books, used for CSV upload
-export const appendBooks = async (data: Book[]) => appendData<Book>('books', data, (newBooks) => {
-    // This is the fallback logic for when not connected to Firebase
-    const bookIds = new Set(localBooks.map(b => b.id));
-    const uniqueNewBooks = newBooks.filter(b => !bookIds.has(b.id));
-    localBooks.push(...uniqueNewBooks);
-});
+export const saveUsers = async (data: User[]) => saveData<User>('users', data);
+export const saveBooks = async (data: Book[]) => saveData<Book>('books', data);
+export const saveHistories = async (data: UserBorrowingHistory[]) => saveData<UserBorrowingHistory>('histories', data);
+export const saveBookDemands = async (data: BookDemand[]) => saveData<BookDemand>('bookDemands', data);
+export const appendBooks = async (data: Book[]) => appendData<Book>('books', data);

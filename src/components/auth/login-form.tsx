@@ -26,7 +26,7 @@ export function LoginForm() {
   const [state, formAction] = useActionState(login, undefined);
 
   useEffect(() => {
-    if (state?.success) {
+    if (state && state.success) {
         if (typeof window !== 'undefined') {
             localStorage.setItem('loggedInUserId', state.userId);
             if (state.role === 'admin') {

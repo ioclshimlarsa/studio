@@ -26,7 +26,7 @@ export function LoginForm() {
   const [state, formAction] = useActionState(login, undefined);
 
   useEffect(() => {
-    if (state && state.success) {
+    if (state?.success) {
         if (typeof window !== 'undefined') {
             localStorage.setItem('loggedInUserId', state.userId);
             if (state.role === 'admin') {
@@ -52,6 +52,7 @@ export function LoginForm() {
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input id="userId" name="userId" placeholder="e.g., user01" required className="pl-10" />
             </div>
+            {state?.fieldErrors?.userId && <p className="text-sm font-medium text-destructive">{state.fieldErrors.userId}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
@@ -59,6 +60,7 @@ export function LoginForm() {
               <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input id="password" name="password" type="password" required className="pl-10" />
             </div>
+            {state?.fieldErrors?.password && <p className="text-sm font-medium text-destructive">{state.fieldErrors.password}</p>}
           </div>
           <RadioGroup name="role" defaultValue="user" className="flex justify-around pt-2">
             <div className="flex items-center space-x-2">
@@ -70,10 +72,12 @@ export function LoginForm() {
               <Label htmlFor="admin-role">Admin</Label>
             </div>
           </RadioGroup>
-          {state?.error && <p className="text-sm text-center font-medium text-destructive">{state.error}</p>}
+          {state?.error && !state.fieldErrors && <p className="text-sm text-center font-medium text-destructive">{state.error}</p>}
           <SubmitButton />
         </form>
       </CardContent>
     </Card>
   );
 }
+
+    

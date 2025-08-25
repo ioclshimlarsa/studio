@@ -94,6 +94,8 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
+      // If toastId is provided, dismiss that one toast.
+      // If not, dismiss all toasts.
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {

@@ -22,6 +22,7 @@ export async function login(prevState: any, formData: FormData) {
   if (!validatedFields.success) {
     return {
       error: 'Invalid fields.',
+      fieldErrors: validatedFields.error.flatten().fieldErrors,
     };
   }
   
